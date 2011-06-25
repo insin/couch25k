@@ -20,6 +20,7 @@ Implemented
 * Selection of Week and Workout.
 * Display of current workout step (Walk or Jog) with status for the step,
   time and status for the overall workout.
+* Plays a sound when changing interval.
 
 Planned
 =======
@@ -27,7 +28,6 @@ Planned
 *(In order of usefulness descending/superfluousness ascending)*
 
 * Finish defining all workouts in the plan.
-* Play a sound when changing interval.
 * Tracking of workout completion data.
 * Animate a sprite indicating what the current step is.
 

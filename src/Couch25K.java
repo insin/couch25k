@@ -1,3 +1,4 @@
+import java.io.IOException;
 import java.util.Timer;
 
 import javax.microedition.lcdui.Choice;
@@ -9,6 +10,8 @@ import javax.microedition.lcdui.Form;
 import javax.microedition.lcdui.Gauge;
 import javax.microedition.lcdui.List;
 import javax.microedition.lcdui.StringItem;
+import javax.microedition.media.Manager;
+import javax.microedition.media.MediaException;
 import javax.microedition.midlet.MIDlet;
 import javax.microedition.midlet.MIDletStateChangeException;
 
@@ -173,6 +176,7 @@ public class Couch25K extends MIDlet implements CommandListener {
         workoutTimer.cancel();
         workoutTracker = null;
         display.setCurrent(workoutCompleteScreen);
+        playSound("finished");
         state = STATE_WORKOUT_COMPLETE;
     }
 
@@ -182,6 +186,7 @@ public class Couch25K extends MIDlet implements CommandListener {
         action.setText(step.action + "(" + stepNum + "/" + workout.steps.length + ")");
         stepProgress.setValue(0);
         stepProgress.setMaxValue(step.duration);
+        playSound(step.action.toLowerCase());
     }
 
     public void updateProgress(int progress, int totalTime) {
@@ -193,6 +198,19 @@ public class Couch25K extends MIDlet implements CommandListener {
     }
 
     // Utilities ---------------------------------------------------------------
+
+    private void playSound(String file) {
+        try {
+            Manager.createPlayer(
+                getClass().getResourceAsStream("/" + file + ".wav"),
+                "audio/x-wav"
+            ).start();
+        } catch (MediaException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
     private String pad(int n) {
         if (n < 10) {
