@@ -1,5 +1,6 @@
 import java.io.IOException;
 import java.util.Timer;
+import java.util.TimerTask;
 
 import javax.microedition.lcdui.Choice;
 import javax.microedition.lcdui.Command;
@@ -27,6 +28,7 @@ public class Couch25K extends MIDlet implements CommandListener {
     private int selectedWeek;
     private int selectedWorkout;
     private Workout workout;
+    private WorkoutState workoutState;
 
     private Display display;
     private List selectWeekScreen;
@@ -45,7 +47,6 @@ public class Couch25K extends MIDlet implements CommandListener {
 
     // Workout timing
     private Timer workoutTimer;
-    private WorkoutTracker workoutTracker;
 
     // MIDlet API --------------------------------------------------------------
 
@@ -144,15 +145,14 @@ public class Couch25K extends MIDlet implements CommandListener {
         workoutProgress.setValue(0);
         workoutScreen.addCommand(startWorkoutCommand);
         display.setCurrent(workoutScreen);
-        workoutTracker = new WorkoutTracker(this, workout);
+        workoutState = new WorkoutState(this, workout);
         state = STATE_WORKOUT_SELECTED;
     }
 
     public void startWorkout() {
         workoutScreen.removeCommand(startWorkoutCommand);
         workoutScreen.addCommand(pauseWorkoutCommand);
-        workoutTimer = new Timer();
-        workoutTimer.scheduleAtFixedRate(workoutTracker, 0, 1000);
+        trackWorkoutState(workoutState);
         state = STATE_WORKOUT;
     }
 
@@ -167,14 +167,12 @@ public class Couch25K extends MIDlet implements CommandListener {
     public void resumeWorkout() {
         workoutScreen.removeCommand(resumeWorkoutCommand);
         workoutScreen.addCommand(pauseWorkoutCommand);
-        workoutTimer = new Timer();
-        workoutTimer.scheduleAtFixedRate(workoutTracker, 0, 1000);
+        trackWorkoutState(workoutState);
         state = STATE_WORKOUT;
     }
 
     public void finishWorkout() {
         workoutTimer.cancel();
-        workoutTracker = null;
         display.setCurrent(workoutCompleteScreen);
         playSound("finished");
         state = STATE_WORKOUT_COMPLETE;
@@ -198,6 +196,15 @@ public class Couch25K extends MIDlet implements CommandListener {
     }
 
     // Utilities ---------------------------------------------------------------
+
+    private void trackWorkoutState(final WorkoutState workoutState) {
+        workoutTimer = new Timer();
+        workoutTimer.scheduleAtFixedRate(new TimerTask() {
+            public void run() {
+                workoutState.increment();
+            }
+        }, 0, 1000);
+    }
 
     private void playSound(String file) {
         try {

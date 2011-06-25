@@ -20,6 +20,7 @@ Implemented
 * Selection of Week and Workout.
 * Display of current workout step (Walk or Jog) with status for the step,
   time and status for the overall workout.
+* Workouts can be paused and resumed.
 * Plays a sound when changing interval.
 
 Planned

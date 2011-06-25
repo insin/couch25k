@@ -1,14 +1,12 @@
-import java.util.TimerTask;
-
-public class WorkoutTracker extends TimerTask {
+public class WorkoutState {
     private Couch25K app;
     private Workout workout;
-    private WorkoutStep currentStep;
-    private int step;
-    private int counter;
-    private int totalTime;
+    public WorkoutStep currentStep;
+    public int step;
+    public int counter;
+    public int totalTime;
 
-    public WorkoutTracker(Couch25K app, Workout workout) {
+    public WorkoutState(Couch25K app, Workout workout) {
         this.app = app;
         this.workout = workout;
         step = 0;
@@ -19,7 +17,7 @@ public class WorkoutTracker extends TimerTask {
         app.updateProgress(counter, totalTime);
     }
 
-    public void run() {
+    public void increment() {
         totalTime++;
         counter++;
         if (counter >= currentStep.duration) {
