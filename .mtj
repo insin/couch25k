@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mtjMetadata jad="couch25k.jad" version="1.2.1.201101310801">
+   <device group="Java(TM) Platform Micro Edition SDK 3.0" name="DefaultCldcJtwiPhone1"/>
+   <signing projectSpecific="false" signProject="false">
+      <alias/>
+   </signing>
+   <configurations>
+      <configuration active="true" name="DefaultCldcJtwiPhone1">
+         <device group="Java(TM) Platform Micro Edition SDK 3.0" name="DefaultCldcJtwiPhone1"/>
+         <symbolSet name="DefaultCldcJtwiPhone1">
+            <symbol name="screen.isColor" value="true"/>
+            <symbol name="MMAPI" value="1.1"/>
+            <symbol name="screen.width" value="180"/>
+            <symbol name="CLDC" value="1.1"/>
+            <symbol name="descriptor" value="JTWI compliant CLDC emulator"/>
+            <symbol name="screen.bitDepth" value="16"/>
+            <symbol name="screen.isTouch" value="false"/>
+            <symbol name="version.configuration" value="CLDC-1.1"/>
+            <symbol name="version.profile" value="MIDP-2.0"/>
+            <symbol name="WMA" value="1.1"/>
+            <symbol name="screen.height" value="208"/>
+            <symbol name="MIDP" value="2.0"/>
+         </symbolSet>
+      </configuration>
+   </configurations>
+</mtjMetadata>
