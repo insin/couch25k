@@ -28,7 +28,6 @@ Planned
 
 *(In order of usefulness descending/superfluousness ascending)*
 
-* Finish defining all workouts in the plan.
 * Tracking of workout completion data.
 * Animate a sprite indicating what the current step is.
 
