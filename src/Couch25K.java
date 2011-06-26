@@ -54,7 +54,7 @@ public class Couch25K extends MIDlet implements CommandListener {
         if (display == null) {
             display = Display.getDisplay(this);
             // Week selection screen setup
-            selectWeekScreen = new List("Select Week", Choice.EXCLUSIVE, new String[] {
+            selectWeekScreen = new List("Select Week", Choice.IMPLICIT, new String[] {
                     "Week 1", "Week 2", "Week 3", "Week 4", "Week 5", "Week 6",
                     "Week 7", "Week 8", "Week 9"
             }, null);
@@ -62,7 +62,7 @@ public class Couch25K extends MIDlet implements CommandListener {
             selectWeekScreen.setCommandListener(this);
 
             // Workout selection screen setup
-            selectWorkoutScreen = new List("Select Workout", Choice.EXCLUSIVE, new String[] {
+            selectWorkoutScreen = new List("Select Workout", Choice.IMPLICIT, new String[] {
                     "Workout 1", "Workout 2", "Workout 3"
             }, null);
             selectWorkoutScreen.addCommand(selectWorkoutCommand);
