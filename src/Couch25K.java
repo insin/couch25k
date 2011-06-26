@@ -269,8 +269,8 @@ public class Couch25K extends MIDlet implements CommandListener, PlayerListener 
 
     private void playSound(String action) {
         try {
-            InputStream in = getClass().getResourceAsStream("/" + action + ".wav");
-            Player player = Manager.createPlayer(in, "audio/x-wav");
+            InputStream in = getClass().getResourceAsStream("/" + action + ".mp3");
+            Player player = Manager.createPlayer(in, "audio/mpeg");
             player.addPlayerListener(this);
             player.start();
         } catch (MediaException e) {
