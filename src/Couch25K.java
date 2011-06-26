@@ -1,4 +1,5 @@
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -15,10 +16,12 @@ import javax.microedition.lcdui.List;
 import javax.microedition.lcdui.StringItem;
 import javax.microedition.media.Manager;
 import javax.microedition.media.MediaException;
+import javax.microedition.media.Player;
+import javax.microedition.media.PlayerListener;
 import javax.microedition.midlet.MIDlet;
 import javax.microedition.midlet.MIDletStateChangeException;
 
-public class Couch25K extends MIDlet implements CommandListener {
+public class Couch25K extends MIDlet implements CommandListener, PlayerListener {
     private static final int STATE_SELECT_WEEK = 1;
     private static final int STATE_SELECT_WORKOUT = 2;
     private static final int STATE_WORKOUT_SELECTED = 3;
@@ -160,6 +163,14 @@ public class Couch25K extends MIDlet implements CommandListener {
         }
     }
 
+    // PlayerListener API ------------------------------------------------------
+
+    public void playerUpdate(Player player, String event, Object eventData) {
+        if (event == PlayerListener.END_OF_MEDIA) {
+            player.close();
+        }
+    }
+
     // State transitions -------------------------------------------------------
 
     public void init() {
@@ -258,10 +269,10 @@ public class Couch25K extends MIDlet implements CommandListener {
 
     private void playSound(String action) {
         try {
-            Manager.createPlayer(
-                getClass().getResourceAsStream("/" + action + ".wav"),
-                "audio/x-wav"
-            ).start();
+            InputStream in = getClass().getResourceAsStream("/" + action + ".wav");
+            Player player = Manager.createPlayer(in, "audio/x-wav");
+            player.addPlayerListener(this);
+            player.start();
         } catch (MediaException e) {
             e.printStackTrace();
         } catch (IOException e) {
