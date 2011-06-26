@@ -30,6 +30,7 @@ public class Couch25K extends MIDlet implements CommandListener {
     private Workout workout;
     private WorkoutState workoutState;
 
+    private Command backCommand = new Command("Back", Command.BACK, 1);
     private Display display;
     private List selectWeekScreen;
     private Command selectWeekCommand = new Command("Select", Command.ITEM, 1);
@@ -66,6 +67,7 @@ public class Couch25K extends MIDlet implements CommandListener {
                     "Workout 1", "Workout 2", "Workout 3"
             }, null);
             selectWorkoutScreen.addCommand(selectWorkoutCommand);
+            selectWorkoutScreen.addCommand(backCommand);
             selectWorkoutScreen.setCommandListener(this);
 
             // Workout screen setup
@@ -109,9 +111,11 @@ public class Couch25K extends MIDlet implements CommandListener {
             break;
         case STATE_SELECT_WORKOUT:
             if (c == selectWorkoutCommand) selectWorkout();
+            else if (c == backCommand) init();
             break;
         case STATE_WORKOUT_SELECTED:
             if (c == startWorkoutCommand) startWorkout();
+            else if (c == backCommand) selectWeek();
             break;
         case STATE_WORKOUT:
             if (c == pauseWorkoutCommand) pauseWorkout();
@@ -144,6 +148,7 @@ public class Couch25K extends MIDlet implements CommandListener {
         workoutProgress.setMaxValue(workout.totalDuration);
         workoutProgress.setValue(0);
         workoutScreen.addCommand(startWorkoutCommand);
+        workoutScreen.addCommand(backCommand);
         display.setCurrent(workoutScreen);
         workoutState = new WorkoutState(this, workout);
         state = STATE_WORKOUT_SELECTED;
@@ -151,6 +156,7 @@ public class Couch25K extends MIDlet implements CommandListener {
 
     public void startWorkout() {
         workoutScreen.removeCommand(startWorkoutCommand);
+        workoutScreen.removeCommand(backCommand);
         workoutScreen.addCommand(pauseWorkoutCommand);
         trackWorkoutState(workoutState);
         state = STATE_WORKOUT;
