@@ -184,7 +184,9 @@ public class Couch25K extends MIDlet implements CommandListener {
         action.setText(step.action + "(" + stepNum + "/" + workout.steps.length + ")");
         stepProgress.setValue(0);
         stepProgress.setMaxValue(step.duration);
-        playSound(step.action.toLowerCase());
+        if (stepNum > 1) {
+            playSound(step.action.toLowerCase());
+        }
     }
 
     public void updateProgress(int progress, int totalTime) {
