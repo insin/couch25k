@@ -41,7 +41,7 @@ public class Workouts {
         workouts.put("4-3", week4Workout);
 
         workouts.put("5-1", new Workout(new int[] {
-            300, 380, 180, 300, 180, 300
+            300, 300, 180, 300, 180, 300
         }));
         workouts.put("5-2", new Workout(new int[] {
             300, 480, 300, 480
@@ -51,7 +51,7 @@ public class Workouts {
         }));
 
         workouts.put("6-1", new Workout(new int[] {
-            300, 380, 180, 480, 180, 300
+            300, 300, 180, 480, 180, 300
         }));
         workouts.put("6-2", new Workout(new int[] {
             300, 600, 180, 600
