@@ -36,8 +36,9 @@ public class Couch25K extends MIDlet implements CommandListener {
     private Command selectWeekCommand = new Command("Select", Command.ITEM, 1);
     private List selectWorkoutScreen;
     private Command selectWorkoutCommand = new Command("Select", Command.ITEM, 1);
-    private Form workoutScreen;
+    private Form workoutSummaryScreen;
     private Command startWorkoutCommand = new Command("Start", Command.SCREEN, 1);
+    private Form workoutScreen;
     private Command pauseWorkoutCommand = new Command("Pause", Command.SCREEN, 2);
     private Command resumeWorkoutCommand = new Command("Resume", Command.SCREEN, 3);
     private StringItem action;
@@ -55,32 +56,41 @@ public class Couch25K extends MIDlet implements CommandListener {
         if (display == null) {
             display = Display.getDisplay(this);
             // Week selection screen setup
-            selectWeekScreen = new List("Select Week", Choice.IMPLICIT, new String[] {
+            selectWeekScreen = new List("Select Week", Choice.IMPLICIT,
+                new String[] {
                     "Week 1", "Week 2", "Week 3", "Week 4", "Week 5", "Week 6",
                     "Week 7", "Week 8", "Week 9"
-            }, null);
+                }, null);
             selectWeekScreen.addCommand(selectWeekCommand);
             selectWeekScreen.setCommandListener(this);
 
             // Workout selection screen setup
-            selectWorkoutScreen = new List("Select Workout", Choice.IMPLICIT, new String[] {
+            selectWorkoutScreen = new List("Select Workout", Choice.IMPLICIT,
+                new String[] {
                     "Workout 1", "Workout 2", "Workout 3"
-            }, null);
+                }, null);
             selectWorkoutScreen.addCommand(selectWorkoutCommand);
             selectWorkoutScreen.addCommand(backCommand);
             selectWorkoutScreen.setCommandListener(this);
 
+            // Workout summary screen setup
+            workoutSummaryScreen = new Form("");
+            workoutSummaryScreen.addCommand(startWorkoutCommand);
+            workoutSummaryScreen.addCommand(backCommand);
+            workoutSummaryScreen.setCommandListener(this);
+
             // Workout screen setup
             workoutScreen = new Form("");
-            workoutScreen.setCommandListener(this);
             action = new StringItem(null, "");
-            stepProgress = new Gauge("Step", false, -1, 0);
+            stepProgress = new Gauge("Step", false, Gauge.INDEFINITE, 0);
             timeDisplay = new StringItem(null, "");
-            workoutProgress = new Gauge("Workout", false, -1, 0);
+            workoutProgress = new Gauge("Workout", false, Gauge.INDEFINITE, 0);
             workoutScreen.append(action);
             workoutScreen.append(stepProgress);
             workoutScreen.append(timeDisplay);
             workoutScreen.append(workoutProgress);
+            workoutScreen.addCommand(pauseWorkoutCommand);
+            workoutScreen.setCommandListener(this);
 
             workoutCompleteScreen = new Form("Workout Complete");
             workoutCompleteScreen.setCommandListener(this);
@@ -124,7 +134,8 @@ public class Couch25K extends MIDlet implements CommandListener {
             if (c == resumeWorkoutCommand) resumeWorkout();
             break;
         default:
-            throw new IllegalStateException("Command " + c + " not expected in state " + state);
+            throw new IllegalStateException("Command " + c +
+                                            " not expected in state " + state);
         }
     }
 
@@ -137,6 +148,7 @@ public class Couch25K extends MIDlet implements CommandListener {
 
     public void selectWeek() {
         selectedWeek = selectWeekScreen.getSelectedIndex() + 1;
+
         display.setCurrent(selectWorkoutScreen);
         state = STATE_SELECT_WORKOUT;
     }
@@ -144,27 +156,35 @@ public class Couch25K extends MIDlet implements CommandListener {
     public void selectWorkout() {
         selectedWorkout = selectWorkoutScreen.getSelectedIndex() + 1;
         workout = Workouts.getWorkout(selectedWeek, selectedWorkout);
-        workoutScreen.setTitle("Week " + selectedWeek + ", Workout " + selectedWorkout);
-        workoutProgress.setMaxValue(workout.totalDuration);
-        workoutProgress.setValue(0);
-        workoutScreen.addCommand(startWorkoutCommand);
-        workoutScreen.addCommand(backCommand);
-        display.setCurrent(workoutScreen);
-        workoutState = new WorkoutState(this, workout);
+
+        workoutSummaryScreen.setTitle("Week " + selectedWeek +
+                                      ", Workout " + selectedWorkout);
+        workoutSummaryScreen.deleteAll();
+        for (int i = 0; i < workout.steps.length; i++) {
+            workoutSummaryScreen.append(new StringItem(null,
+                workout.steps[i].action + " for " +
+                secondsToDisplayTime(workout.steps[i].duration) + "\n"
+            ));
+        }
+        display.setCurrent(workoutSummaryScreen);
         state = STATE_WORKOUT_SELECTED;
     }
 
     public void startWorkout() {
-        workoutScreen.removeCommand(startWorkoutCommand);
-        workoutScreen.removeCommand(backCommand);
-        workoutScreen.addCommand(pauseWorkoutCommand);
+        workoutState = new WorkoutState(this, workout);
+
+        workoutScreen.setTitle("Week " + selectedWeek +
+                               ", Workout " + selectedWorkout);
+        workoutProgress.setMaxValue(workout.totalDuration);
+        workoutProgress.setValue(0);
+        display.setCurrent(workoutScreen);
         trackWorkoutState(workoutState);
         state = STATE_WORKOUT;
     }
 
     public void pauseWorkout() {
         workoutTimer.cancel();
-        workoutTimer = null;
+
         workoutScreen.removeCommand(pauseWorkoutCommand);
         workoutScreen.addCommand(resumeWorkoutCommand);
         state = STATE_WORKOUT_PAUSED;
@@ -179,6 +199,7 @@ public class Couch25K extends MIDlet implements CommandListener {
 
     public void finishWorkout() {
         workoutTimer.cancel();
+
         display.setCurrent(workoutCompleteScreen);
         playSound("finished");
         state = STATE_WORKOUT_COMPLETE;
@@ -187,7 +208,7 @@ public class Couch25K extends MIDlet implements CommandListener {
     // Status update API -------------------------------------------------------
 
     public void updateStep(int stepNum, WorkoutStep step) {
-        action.setText(step.action + " for " + secondsToTime(step.duration));
+        action.setText(step.action + " for " + secondsToDisplayTime(step.duration));
         stepProgress.setLabel("Step " + stepNum + " of " + workout.steps.length);
         stepProgress.setValue(0);
         stepProgress.setMaxValue(step.duration);
@@ -213,10 +234,10 @@ public class Couch25K extends MIDlet implements CommandListener {
         }, 0, 1000);
     }
 
-    private void playSound(String file) {
+    private void playSound(String action) {
         try {
             Manager.createPlayer(
-                getClass().getResourceAsStream("/" + file + ".wav"),
+                getClass().getResourceAsStream("/" + action + ".wav"),
                 "audio/x-wav"
             ).start();
         } catch (MediaException e) {
@@ -224,6 +245,18 @@ public class Couch25K extends MIDlet implements CommandListener {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    private String secondsToDisplayTime(int n) {
+        if (n <= 90) {
+            return n + " sec";
+        }
+        int min = n / 60;
+        int sec = n % 60;
+        if (sec == 0) {
+          return min + " min";
+        }
+        return min + " min " + sec + " sec";
     }
 
     private String secondsToTime(int n) {
