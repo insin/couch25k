@@ -121,7 +121,7 @@ public class Couch25K extends MIDlet implements CommandListener, PlayerListener 
         }
 
         if (state == STATE_WORKOUT_PAUSED) {
-            startWorkout();
+            resumeWorkout();
         } else {
             init();
         }
