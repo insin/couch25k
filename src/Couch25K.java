@@ -187,7 +187,8 @@ public class Couch25K extends MIDlet implements CommandListener {
     // Status update API -------------------------------------------------------
 
     public void updateStep(int stepNum, WorkoutStep step) {
-        action.setText(step.action + " (" + stepNum + "/" + workout.steps.length + ")");
+        action.setText(step.action + " for " + secondsToTime(step.duration));
+        stepProgress.setLabel("Step " + stepNum + " of " + workout.steps.length);
         stepProgress.setValue(0);
         stepProgress.setMaxValue(step.duration);
         if (stepNum > 1) {
@@ -197,9 +198,7 @@ public class Couch25K extends MIDlet implements CommandListener {
 
     public void updateProgress(int progress, int totalTime) {
         stepProgress.setValue(progress);
-        int minutes = totalTime / 60;
-        int seconds = totalTime % 60;
-        timeDisplay.setText(pad(minutes) + ":" + pad(seconds));
+        timeDisplay.setText(secondsToTime(totalTime));
         workoutProgress.setValue(totalTime);
     }
 
@@ -225,6 +224,12 @@ public class Couch25K extends MIDlet implements CommandListener {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    private String secondsToTime(int n) {
+        int minutes = n / 60;
+        int seconds = n % 60;
+        return pad(minutes) + ":" + pad(seconds);
     }
 
     private String pad(int n) {
