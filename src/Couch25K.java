@@ -181,7 +181,7 @@ public class Couch25K extends MIDlet implements CommandListener {
     // Status update API -------------------------------------------------------
 
     public void updateStep(int stepNum, WorkoutStep step) {
-        action.setText(step.action + "(" + stepNum + "/" + workout.steps.length + ")");
+        action.setText(step.action + " (" + stepNum + "/" + workout.steps.length + ")");
         stepProgress.setValue(0);
         stepProgress.setMaxValue(step.duration);
         if (stepNum > 1) {
