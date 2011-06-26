@@ -246,6 +246,7 @@ public class Couch25K extends MIDlet implements CommandListener, PlayerListener 
         stepProgress.setMaxValue(step.duration);
         if (stepNum > 1) {
             playSound(step.action.toLowerCase());
+            display.vibrate(1000);
         }
     }
 

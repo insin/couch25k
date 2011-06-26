@@ -1,8 +1,8 @@
 MIDlet-1: Couck25K,,Couch25K
-MIDlet-Jar-Size: 162296
+MIDlet-Jar-Size: 162304
 MIDlet-Jar-URL: couch25k.jar
 MIDlet-Name: couch25k
 MIDlet-Vendor: insin
-MIDlet-Version: 0.1.1
+MIDlet-Version: 0.2
 MicroEdition-Configuration: CLDC-1.1
 MicroEdition-Profile: MIDP-2.0

@@ -19,7 +19,7 @@ Implemented
 * Display of current workout step (Walk or Jog) with status and timing
   for the step and workout.
 * Workouts can be paused and resumed.
-* Plays a sound when changing interval.
+* Plays a sound and vibrates when changing interval.
 
 Planned
 =======
