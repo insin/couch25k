@@ -8,14 +8,10 @@ public class Workouts {
     static {
         workouts = new Hashtable();
 
-        Workout testWorkout = new Workout(new int[] {
-            20, 20, 20
-        });
-
         Workout week1Workout = new Workout(new int[] {
             300, 60, 90, 60, 90, 60, 90, 60, 90, 60, 90, 60, 90
         });
-        workouts.put("1-1", testWorkout);
+        workouts.put("1-1", week1Workout);
         workouts.put("1-2", week1Workout);
         workouts.put("1-3", week1Workout);
 
