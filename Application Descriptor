@@ -1,4 +1,4 @@
-MIDlet-Version: 0.2
+MIDlet-Version: 0.2.1
 MIDlet-Vendor: insin
 MIDlet-Jar-URL: couch25k.jar
 MicroEdition-Configuration: CLDC-1.1
