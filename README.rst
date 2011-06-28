@@ -20,13 +20,14 @@ Implemented
   for the step and workout.
 * Workouts can be paused and resumed.
 * Plays a sound and vibrates when changing interval.
+* Stores completion status and date for each workout.
 
 Planned
 =======
 
 *(In order of usefulness descending/superfluousness ascending)*
 
-* Tracking of workout completion data.
+* Offer first uncompleted workout as a quick option.
 * Animate a sprite indicating what the current step is.
 
 Building
