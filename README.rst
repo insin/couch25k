@@ -21,13 +21,13 @@ Implemented
 * Workouts can be paused and resumed.
 * Plays a sound and vibrates when changing interval.
 * Stores completion status and date for each workout.
+* Quick Start jumps to first incomplete workout.
 
 Planned
 =======
 
 *(In order of usefulness descending/superfluousness ascending)*
 
-* Offer first uncompleted workout as a quick option.
 * Animate a sprite indicating what the current step is.
 
 Building

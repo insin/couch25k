@@ -44,6 +44,8 @@ public class Couch25K extends MIDlet implements CommandListener, PlayerListener 
     Week[] weeks;
     /** Index of selected week on the Select Week screen. */
     int selectedWeek;
+    /** Has the week changed since the Select Workout screen was last shown? */
+    boolean weekChanged;
     /** Workout configuration for the selected week. */
     Week week;
     /** Index of selected workout on the Select Workout screen. */
@@ -163,6 +165,7 @@ public class Couch25K extends MIDlet implements CommandListener, PlayerListener 
     // Commands
     Command backCommand = new Command("Back", Command.BACK, 1);
     Command selectCommand = new Command("Select", Command.ITEM, 1);
+    Command quickStartCommand = new Command("Quick Start", Command.SCREEN, 1);
     Command startCommand = new Command("Start", Command.SCREEN, 1);
     Command markCompleteCommand = new Command("Mark Complete", Command.SCREEN, 2);
     Command pauseCommand = new Command("Pause", Command.SCREEN, 1);
@@ -170,13 +173,14 @@ public class Couch25K extends MIDlet implements CommandListener, PlayerListener 
 
     void initialiseUI() {
         display = Display.getDisplay(this);
-        boldUnderlinedFont = Font.getFont(Font.FACE_PROPORTIONAL, Font.STYLE_BOLD | Font.STYLE_UNDERLINED, Font.SIZE_MEDIUM);
+        boldUnderlinedFont = Font.getFont(Font.FACE_PROPORTIONAL, Font.STYLE_BOLD, Font.SIZE_MEDIUM);
         bigBoldFont = Font.getFont(Font.FACE_PROPORTIONAL, Font.STYLE_BOLD, Font.SIZE_LARGE);
         tickImage = loadImage("tick");
 
         // Week selection screen
         selectWeekScreen = new List("couch25k - Select Week", Choice.IMPLICIT);
         selectWeekScreen.setSelectCommand(selectCommand);
+        selectWeekScreen.addCommand(quickStartCommand);
         selectWeekScreen.setCommandListener(this);
 
         // Workout selection screen
@@ -230,23 +234,35 @@ public class Couch25K extends MIDlet implements CommandListener, PlayerListener 
 
     // State transitions -------------------------------------------------------
 
-    void init() {
+    void showSelectWeekScreen() {
+        boolean allCompleted = true;
         selectWeekScreen.deleteAll();
         for (int i = 0; i < weeks.length; i++) {
+            boolean weekCompleted = weeks[i].isCompleted();
             selectWeekScreen.append(
                 "Week " + (i + 1),
-                (weeks[i].isCompleted() ? tickImage : null));
+                weekCompleted ? tickImage : null);
+            if (!weekCompleted && allCompleted) {
+                allCompleted = false;
+            }
         }
+        // Restore any previously-selected week
         selectWeekScreen.setSelectedIndex(selectedWeek, true);
+        if (allCompleted) {
+            selectWeekScreen.removeCommand(quickStartCommand);
+        }
         display.setCurrent(selectWeekScreen);
         state = STATE_SELECT_WEEK;
     }
 
     void selectWeek() {
-        boolean weekChanged = (selectedWeek != selectWeekScreen.getSelectedIndex());
+        weekChanged = (selectedWeek != selectWeekScreen.getSelectedIndex());
         selectedWeek = selectWeekScreen.getSelectedIndex();
         week = weeks[selectedWeek];
+        showSelectWorkoutScreen();
+    }
 
+    void showSelectWorkoutScreen() {
         selectWorkoutScreen.setTitle("Week " + (selectedWeek + 1) +
                                      " - Select Workout");
         selectWorkoutScreen.deleteAll();
@@ -265,7 +281,19 @@ public class Couch25K extends MIDlet implements CommandListener, PlayerListener 
     void selectWorkout() {
         selectedWorkout = selectWorkoutScreen.getSelectedIndex();
         workout = week.workouts[selectedWorkout];
+        showWorkoutSummaryScreen();
+    }
 
+    void quickStart(int weekIndex, int workoutIndex) {
+        weekChanged = (selectedWeek != weekIndex);
+        selectedWeek = weekIndex;
+        week = weeks[weekIndex];
+        selectedWorkout = workoutIndex;
+        workout = week.workouts[workoutIndex];
+        showWorkoutSummaryScreen();
+    }
+
+    void showWorkoutSummaryScreen() {
         workoutSummaryScreen.setTitle("Week " + (selectedWeek + 1) +
                                       " - Workout " + (selectedWorkout + 1));
         workoutSummaryScreen.deleteAll();
@@ -404,6 +432,7 @@ public class Couch25K extends MIDlet implements CommandListener, PlayerListener 
         }
         return "" + n;
     }
+
     // MIDlet API --------------------------------------------------------------
 
     /** Initialises or resumes the applcation as approriate. */
@@ -416,7 +445,7 @@ public class Couch25K extends MIDlet implements CommandListener, PlayerListener 
         if (state == STATE_WORKOUT_PAUSED) {
             resumeWorkout();
         } else {
-            init();
+            showSelectWeekScreen();
         }
     }
 
@@ -442,22 +471,33 @@ public class Couch25K extends MIDlet implements CommandListener, PlayerListener 
         switch (state) {
         case STATE_SELECT_WEEK:
             if (c == selectCommand) selectWeek();
+            if (c == quickStartCommand) {
+                for (int i = 0; i < weeks.length; i++) {
+                    if (weeks[i].isCompleted()) continue;
+                    for (int j = 0; j < weeks[i].workouts.length; j++) {
+                        if (weeks[i].completedAt[j] == null) {
+                            quickStart(i, j);
+                            return;
+                        }
+                    }
+                }
+            }
             break;
         case STATE_SELECT_WORKOUT:
             if (c == selectCommand) selectWorkout();
-            if (c == backCommand) init();
+            if (c == backCommand) showSelectWeekScreen();
             if (c == markCompleteCommand) {
                 int selectedWorkout = selectWorkoutScreen.getSelectedIndex();
                 week.completedAt[selectedWorkout] =
                     workoutStore.completeWorkout(selectedWeek, selectedWorkout);
                 // Redraw lazily
-                selectWeek();
+                showSelectWorkoutScreen();
                 selectWorkoutScreen.setSelectedIndex(selectedWorkout, true);
             }
             break;
         case STATE_WORKOUT_SELECTED:
             if (c == startCommand) startWorkout();
-            if (c == backCommand) selectWeek();
+            if (c == backCommand) showSelectWorkoutScreen();
             break;
         case STATE_WORKOUT:
             if (c == pauseCommand) pauseWorkout();
@@ -466,7 +506,7 @@ public class Couch25K extends MIDlet implements CommandListener, PlayerListener 
             if (c == resumeCommand) resumeWorkout();
             break;
         case STATE_WORKOUT_COMPLETE:
-            if (c == backCommand) init();
+            if (c == backCommand) showSelectWeekScreen();
             break;
         }
     }
