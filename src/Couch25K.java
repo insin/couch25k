@@ -175,12 +175,12 @@ public class Couch25K extends MIDlet implements CommandListener, PlayerListener 
         tickImage = loadImage("tick");
 
         // Week selection screen
-        selectWeekScreen = new List("Select Week", Choice.IMPLICIT);
+        selectWeekScreen = new List("couch25k - Select Week", Choice.IMPLICIT);
         selectWeekScreen.setSelectCommand(selectCommand);
         selectWeekScreen.setCommandListener(this);
 
         // Workout selection screen
-        selectWorkoutScreen = new List("Select Workout", Choice.IMPLICIT);
+        selectWorkoutScreen = new List("", Choice.IMPLICIT);
         selectWorkoutScreen.setSelectCommand(selectCommand);
         selectWorkoutScreen.addCommand(markCompleteCommand);
         selectWorkoutScreen.addCommand(backCommand);
@@ -237,19 +237,26 @@ public class Couch25K extends MIDlet implements CommandListener, PlayerListener 
                 "Week " + (i + 1),
                 (weeks[i].isCompleted() ? tickImage : null));
         }
+        selectWeekScreen.setSelectedIndex(selectedWeek, true);
         display.setCurrent(selectWeekScreen);
         state = STATE_SELECT_WEEK;
     }
 
     void selectWeek() {
+        boolean weekChanged = (selectedWeek != selectWeekScreen.getSelectedIndex());
         selectedWeek = selectWeekScreen.getSelectedIndex();
         week = weeks[selectedWeek];
 
+        selectWorkoutScreen.setTitle("Week " + (selectedWeek + 1) +
+                                     " - Select Workout");
         selectWorkoutScreen.deleteAll();
         for (int i = 0; i < week.workouts.length; i++) {
             selectWorkoutScreen.append(
-                "Workout 1 - " + secToTime(week.workouts[i].totalDuration),
+                "Workout " + (i + 1) + " - " + secToTime(week.workouts[i].totalDuration),
                 (week.completedAt[i] != null ? tickImage : null));
+        }
+        if (!weekChanged) {
+            selectWorkoutScreen.setSelectedIndex(selectedWorkout, true);
         }
         display.setCurrent(selectWorkoutScreen);
         state = STATE_SELECT_WORKOUT;
