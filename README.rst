@@ -22,12 +22,14 @@ Implemented
 * Plays a sound and vibrates when changing interval.
 * Stores completion status and date for each workout.
 * Quick Start jumps to first incomplete workout.
+* Tweet completion of workouts via SMS - number and message are configurable.
 
 Planned
 =======
 
 *(In order of usefulness descending/superfluousness ascending)*
 
+* Tweeting via xAuth, identifying as a Twitter app - need to request xAuth permission via email O_o
 * Animate a sprite indicating what the current step is.
 
 Building
