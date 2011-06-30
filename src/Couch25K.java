@@ -1,10 +1,8 @@
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.util.Hashtable;
 import java.util.Timer;
 import java.util.TimerTask;
 
-import javax.microedition.io.Connector;
 import javax.microedition.lcdui.Choice;
 import javax.microedition.lcdui.Command;
 import javax.microedition.lcdui.CommandListener;
@@ -20,8 +18,13 @@ import javax.microedition.lcdui.List;
 import javax.microedition.lcdui.StringItem;
 import javax.microedition.midlet.MIDlet;
 import javax.microedition.midlet.MIDletStateChangeException;
-import javax.wireless.messaging.MessageConnection;
-import javax.wireless.messaging.TextMessage;
+
+import com.twitterapime.rest.Credential;
+import com.twitterapime.rest.TweetER;
+import com.twitterapime.rest.UserAccountManager;
+import com.twitterapime.search.LimitExceededException;
+import com.twitterapime.search.Tweet;
+import com.twitterapime.xauth.Token;
 
 /**
  * Tracks jogging and walking intervals for the Couch-to-5k running program.
@@ -34,7 +37,6 @@ public class Couch25K extends MIDlet implements CommandListener {
     static final int STATE_WORKOUT_PAUSED = 5;
     static final int STATE_WORKOUT_COMPLETE = 6;
 
-    static final String CONFIG_TWITTER_SMS = "twitterSMS";
     static final String CONFIG_TWEET_TEMPLATE = "tweetTemplate";
 
     // MIDlet state ------------------------------------------------------------
@@ -57,15 +59,22 @@ public class Couch25K extends MIDlet implements CommandListener {
     Hashtable config; // TODO Provide Options screen for editing configuration
     /** State persistence. */
     WorkoutStore workoutStore;
+    /** OAuth authentication details for Twitter. */
+    TwitterKeys twitterKeys;
 
     void initialiseState() {
         weeks = Workouts.getWorkouts();
         workoutStore = new WorkoutStore();
         workoutStore.setCompletion(weeks);
         config = new Hashtable();
-        config.put(CONFIG_TWITTER_SMS, "86444");
-        config.put(CONFIG_TWEET_TEMPLATE,
-                   "Completed $1 of #couchto5k with https://github.com/insin/couch25k");
+        config.put(CONFIG_TWEET_TEMPLATE, "Completed $1 of #couchto5k");
+
+        // Load Twitter authentication details, if available
+        try {
+            twitterKeys = (TwitterKeys)Class.forName("TwitterKeysImpl").newInstance();
+        } catch (Exception e) {
+            // Twitter keys not available
+        }
     }
 
     // Workout tracking --------------------------------------------------------
@@ -233,7 +242,9 @@ public class Couch25K extends MIDlet implements CommandListener {
         // Workout completion screen
         workoutCompleteScreen = new Form("Workout Complete");
         workoutCompleteScreen.addCommand(exitCommand);
-        workoutCompleteScreen.addCommand(tweetCommand);
+        if (twitterKeys != null) {
+            workoutCompleteScreen.addCommand(tweetCommand);
+        }
         workoutCompleteScreen.setCommandListener(this);
     }
 
@@ -360,17 +371,25 @@ public class Couch25K extends MIDlet implements CommandListener {
 
     void tweetCompletion() {
         try {
-            String addr = "sms://" + (String)config.get(CONFIG_TWITTER_SMS);
-            MessageConnection conn = (MessageConnection)Connector.open(addr);
-            TextMessage msg =
-                (TextMessage)conn.newMessage(MessageConnection.TEXT_MESSAGE);
-            msg.setPayloadText(Utils.format((String)config.get(CONFIG_TWEET_TEMPLATE),
-                                            new String[] { workoutTitle() }));
-            conn.send(msg);
-            workoutCompleteScreen.removeCommand(tweetCommand);
-        } catch (InterruptedIOException e) {
-            e.printStackTrace();
+            Token tok = new Token(twitterKeys.getOAuthToken(),
+                                  twitterKeys.getOAuthSecret());
+            Credential c = new Credential(twitterKeys.getUserName(),
+                                          twitterKeys.getConsumerKey(),
+                                          twitterKeys.getConsumerSecret(),
+                                          tok);
+            UserAccountManager m = UserAccountManager.getInstance(c);
+            if (m.verifyCredential()) {
+                String text = Utils.format(
+                    (String)config.get(CONFIG_TWEET_TEMPLATE),
+                    new String[] { workoutTitle() });
+                Tweet t = new Tweet(text);
+                TweetER ter = TweetER.getInstance(m);
+                t = ter.post(t);
+                workoutCompleteScreen.removeCommand(tweetCommand);
+            }
         } catch (IOException e) {
+            e.printStackTrace();
+        } catch (LimitExceededException e) {
             e.printStackTrace();
         }
     }
