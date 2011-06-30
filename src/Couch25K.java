@@ -19,6 +19,8 @@ import javax.microedition.lcdui.Item;
 import javax.microedition.lcdui.ItemCommandListener;
 import javax.microedition.lcdui.List;
 import javax.microedition.lcdui.StringItem;
+import javax.microedition.lcdui.TextBox;
+import javax.microedition.lcdui.TextField;
 import javax.microedition.midlet.MIDlet;
 import javax.microedition.midlet.MIDletStateChangeException;
 import javax.wireless.messaging.MessageConnection;
@@ -30,12 +32,13 @@ import javax.wireless.messaging.TextMessage;
 public class Couch25K extends MIDlet implements CommandListener, ItemCommandListener {
     static final int STATE_TITLE_SCREEN = 1;
     static final int STATE_OPTIONS_SCREEN = 2;
-    static final int STATE_SELECT_WEEK = 3;
-    static final int STATE_SELECT_WORKOUT = 4;
-    static final int STATE_WORKOUT_SELECTED = 5;
-    static final int STATE_WORKOUT = 6;
-    static final int STATE_WORKOUT_PAUSED = 7;
-    static final int STATE_WORKOUT_COMPLETE = 8;
+    static final int STATE_EDITING_TWEET_TEMPLATE = 3;
+    static final int STATE_SELECT_WEEK = 4;
+    static final int STATE_SELECT_WORKOUT = 5;
+    static final int STATE_WORKOUT_SELECTED = 6;
+    static final int STATE_WORKOUT = 7;
+    static final int STATE_WORKOUT_PAUSED = 8;
+    static final int STATE_WORKOUT_COMPLETE = 9;
 
     static final String CONFIG_TWITTER_SMS = "twitterSMS";
     static final String CONFIG_TWEET_TEMPLATE = "tweetTemplate";
@@ -65,10 +68,13 @@ public class Couch25K extends MIDlet implements CommandListener, ItemCommandList
         weeks = Workouts.getWorkouts();
         workoutStore = new WorkoutStore();
         workoutStore.setCompletion(weeks);
-        config = new Hashtable();
-        config.put(CONFIG_TWITTER_SMS, "86444");
-        config.put(CONFIG_TWEET_TEMPLATE,
-                   "Completed $1 of #couchto5k");
+        config = workoutStore.loadConfig();
+        if (config.size() == 0) {
+            config = new Hashtable();
+            config.put(CONFIG_TWITTER_SMS, "86444");
+            config.put(CONFIG_TWEET_TEMPLATE,
+                       "Completed $1 of #couchto5k");
+        }
     }
 
     // Workout tracking --------------------------------------------------------
@@ -155,9 +161,14 @@ public class Couch25K extends MIDlet implements CommandListener, ItemCommandList
 
     Display display;
     Image tickImage;
-    Font boldUnderlinedFont, bigBoldFont;
+    Font boldUnderlinedFont, bigBoldFont, mediumBoldFont, smallFont;
     Form titleScreen;
     StringItem title, quickStartMenu, selectWorkoutMenu, optionsMenu, exitMenu;
+    Form optionsScreen;
+    TextField twitterSMS;
+    StringItem tweetTemplate;
+    StringItem editTweetMenu;
+    TextBox editTweetTemplate;
     List selectWeekScreen;
     List selectWorkoutScreen;
     Form workoutSummaryScreen;
@@ -174,6 +185,10 @@ public class Couch25K extends MIDlet implements CommandListener, ItemCommandList
     Command selectCommand = new Command("Select", Command.ITEM, 1);
     Command quickStartCommand = new Command("Quick Start", Command.SCREEN, 1);
     Command optionsCommand = new Command("Options", Command.ITEM, 1);
+    Command editCommand = new Command("Edit", Command.ITEM, 1);
+    Command okCommand = new Command("OK", Command.OK, 1);
+    Command saveCommand = new Command("Save", Command.SCREEN, 1);
+    Command cancelCommand = new Command("Cancel", Command.SCREEN, 1);
     Command startCommand = new Command("Start", Command.SCREEN, 1);
     Command markCompleteCommand = new Command("Mark Complete", Command.SCREEN, 2);
     Command pauseCommand = new Command("Pause", Command.SCREEN, 1);
@@ -184,7 +199,9 @@ public class Couch25K extends MIDlet implements CommandListener, ItemCommandList
     void initialiseUI() {
         display = Display.getDisplay(this);
         boldUnderlinedFont = Font.getFont(Font.FACE_PROPORTIONAL, Font.STYLE_BOLD, Font.SIZE_MEDIUM);
+        mediumBoldFont = Font.getFont(Font.FACE_PROPORTIONAL, Font.STYLE_BOLD, Font.SIZE_MEDIUM);
         bigBoldFont = Font.getFont(Font.FACE_PROPORTIONAL, Font.STYLE_BOLD, Font.SIZE_LARGE);
+        smallFont = Font.getFont(Font.FACE_PROPORTIONAL, Font.STYLE_PLAIN, Font.SIZE_SMALL);
         tickImage = Utils.loadImage("tick");
 
         // Title screen
@@ -213,6 +230,35 @@ public class Couch25K extends MIDlet implements CommandListener, ItemCommandList
         titleScreen.append(selectWorkoutMenu);
         titleScreen.append(optionsMenu);
         titleScreen.append(exitMenu);
+
+        // Options screen
+        optionsScreen = new Form("couch25k Options");
+        twitterSMS = new TextField("Twitter SMS Number",
+                                   (String)config.get(CONFIG_TWITTER_SMS),
+                                   11, TextField.NUMERIC);
+        tweetTemplate = new StringItem("Tweet Template",
+                                       (String)config.get(CONFIG_TWEET_TEMPLATE));
+        editTweetMenu = new StringItem(null, "Edit", Item.BUTTON);
+        editTweetMenu.setLayout(Item.LAYOUT_RIGHT);
+        editTweetMenu.addCommand(editCommand);
+        editTweetMenu.setItemCommandListener(this);
+        StringItem tweetTemplateHint = new StringItem(null, "$1: Week X - Workout Y");
+        tweetTemplateHint.setFont(smallFont);
+        tweetTemplateHint.setLayout(Item.LAYOUT_LEFT);
+        optionsScreen.append(twitterSMS);
+        optionsScreen.append(tweetTemplate);
+        optionsScreen.append(editTweetMenu);
+        optionsScreen.append(tweetTemplateHint);
+        optionsScreen.addCommand(cancelCommand);
+        optionsScreen.addCommand(saveCommand);
+        optionsScreen.setCommandListener(this);
+
+        // Tweet template screen
+        editTweetTemplate = new TextBox("Tweet Template",
+                (String)config.get(CONFIG_TWEET_TEMPLATE),
+                140, TextField.ANY);
+        editTweetTemplate.addCommand(okCommand);
+        editTweetTemplate.setCommandListener(this);
 
         // Week selection screen
         selectWeekScreen = new List("couch25k - Select Week", Choice.IMPLICIT);
@@ -277,6 +323,7 @@ public class Couch25K extends MIDlet implements CommandListener, ItemCommandList
         state = STATE_TITLE_SCREEN;
     }
 
+    /** Opens the workout summary screen with the first incomplete workout. */
     void quickStart() {
         for (int i = 0; i < weeks.length; i++) {
             if (!weeks[i].isCompleted()) {
@@ -292,7 +339,29 @@ public class Couch25K extends MIDlet implements CommandListener, ItemCommandList
     }
 
     void showOptionsScreen() {
-        // TODO Implement options screen
+        display.setCurrent(optionsScreen);
+        state = STATE_OPTIONS_SCREEN;
+    }
+
+    void editTweetTemplate() {
+        display.setCurrent(editTweetTemplate);
+        state = STATE_EDITING_TWEET_TEMPLATE;
+    }
+
+    void saveOptions() {
+        config.put(CONFIG_TWITTER_SMS, twitterSMS.getString());
+        config.put(CONFIG_TWEET_TEMPLATE, editTweetTemplate.getString());
+        workoutStore.saveConfig(config);
+        showTitleScreen();
+    }
+
+    void cancelOptions() {
+        twitterSMS.delete(0, twitterSMS.size());
+        twitterSMS.insert((String)config.get(CONFIG_TWITTER_SMS), 0);
+        editTweetTemplate.delete(0, editTweetTemplate.size());
+        editTweetTemplate.insert((String)config.get(CONFIG_TWEET_TEMPLATE), 0);
+        tweetTemplate.setText((String)config.get(CONFIG_TWEET_TEMPLATE));
+        showTitleScreen();
     }
 
     void showSelectWeekScreen() {
@@ -473,6 +542,16 @@ public class Couch25K extends MIDlet implements CommandListener, ItemCommandList
      */
     public void commandAction(Command c, Displayable d) {
         switch (state) {
+        case STATE_OPTIONS_SCREEN:
+            if (c == saveCommand) saveOptions();
+            if (c == cancelCommand) cancelOptions();
+            break;
+        case STATE_EDITING_TWEET_TEMPLATE:
+            if (c == okCommand) {
+                tweetTemplate.setText(editTweetTemplate.getString());
+                showOptionsScreen();
+            }
+            break;
         case STATE_SELECT_WEEK:
             if (c == selectCommand) selectWeek();
             if (c == backCommand) showTitleScreen();
@@ -506,10 +585,15 @@ public class Couch25K extends MIDlet implements CommandListener, ItemCommandList
         }
     }
 
+    /**
+     * Calls the appropriate transition method based on a specific item which
+     * an action was performed on.
+     */
     public void commandAction(Command c, Item item) {
         if (item == quickStartMenu) quickStart();
         if (item == selectWorkoutMenu) showSelectWeekScreen();
         if (item == optionsMenu) showOptionsScreen();
+        if (item == editTweetMenu) editTweetTemplate();
         if (item == exitMenu) exit();
     }
 }
