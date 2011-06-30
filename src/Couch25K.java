@@ -68,7 +68,7 @@ public class Couch25K extends MIDlet implements CommandListener, ItemCommandList
         config = new Hashtable();
         config.put(CONFIG_TWITTER_SMS, "86444");
         config.put(CONFIG_TWEET_TEMPLATE,
-                   "Completed $1 of #couchto5k with https://github.com/insin/couch25k");
+                   "Completed $1 of #couchto5k");
     }
 
     // Workout tracking --------------------------------------------------------
