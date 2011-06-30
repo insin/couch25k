@@ -236,9 +236,9 @@ public class Couch25K extends MIDlet implements CommandListener, ItemCommandList
         twitterSMS = new TextField("Twitter SMS Number",
                                    (String)config.get(CONFIG_TWITTER_SMS),
                                    11, TextField.NUMERIC);
-        tweetTemplate = new StringItem("Tweet Template",
+        tweetTemplate = new StringItem("Tweet Template\n",
                                        (String)config.get(CONFIG_TWEET_TEMPLATE));
-        editTweetMenu = new StringItem(null, "Edit", Item.BUTTON);
+        editTweetMenu = new StringItem(null, "Edit\n", Item.BUTTON);
         editTweetMenu.setLayout(Item.LAYOUT_RIGHT);
         editTweetMenu.addCommand(editCommand);
         editTweetMenu.setItemCommandListener(this);
