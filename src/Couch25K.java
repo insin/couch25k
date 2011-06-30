@@ -1,10 +1,10 @@
 import java.io.IOException;
-import java.io.InputStream;
-import java.util.Calendar;
-import java.util.Date;
+import java.io.InterruptedIOException;
+import java.util.Hashtable;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import javax.microedition.io.Connector;
 import javax.microedition.lcdui.Choice;
 import javax.microedition.lcdui.Command;
 import javax.microedition.lcdui.CommandListener;
@@ -18,23 +18,24 @@ import javax.microedition.lcdui.ImageItem;
 import javax.microedition.lcdui.Item;
 import javax.microedition.lcdui.List;
 import javax.microedition.lcdui.StringItem;
-import javax.microedition.media.Manager;
-import javax.microedition.media.MediaException;
-import javax.microedition.media.Player;
-import javax.microedition.media.PlayerListener;
 import javax.microedition.midlet.MIDlet;
 import javax.microedition.midlet.MIDletStateChangeException;
+import javax.wireless.messaging.MessageConnection;
+import javax.wireless.messaging.TextMessage;
 
 /**
  * Tracks jogging and walking intervals for the Couch-to-5k running program.
  */
-public class Couch25K extends MIDlet implements CommandListener, PlayerListener {
+public class Couch25K extends MIDlet implements CommandListener {
     static final int STATE_SELECT_WEEK = 1;
     static final int STATE_SELECT_WORKOUT = 2;
     static final int STATE_WORKOUT_SELECTED = 3;
     static final int STATE_WORKOUT = 4;
     static final int STATE_WORKOUT_PAUSED = 5;
     static final int STATE_WORKOUT_COMPLETE = 6;
+
+    static final String CONFIG_TWITTER_SMS = "twitterSMS";
+    static final String CONFIG_TWEET_TEMPLATE = "tweetTemplate";
 
     // MIDlet state ------------------------------------------------------------
 
@@ -52,6 +53,8 @@ public class Couch25K extends MIDlet implements CommandListener, PlayerListener 
     int selectedWorkout;
     /** Active Workout configuration. */
     Workout workout;
+    /** Configuration options. */
+    Hashtable config; // TODO Provide Options screen for editing configuration
     /** State persistence. */
     WorkoutStore workoutStore;
 
@@ -59,6 +62,10 @@ public class Couch25K extends MIDlet implements CommandListener, PlayerListener 
         weeks = Workouts.getWorkouts();
         workoutStore = new WorkoutStore();
         workoutStore.setCompletion(weeks);
+        config = new Hashtable();
+        config.put(CONFIG_TWITTER_SMS, "86444");
+        config.put(CONFIG_TWEET_TEMPLATE,
+                   "Completed $1 of #couchto5k with https://github.com/insin/couch25k");
     }
 
     // Workout tracking --------------------------------------------------------
@@ -123,12 +130,12 @@ public class Couch25K extends MIDlet implements CommandListener, PlayerListener 
      * Updates step display and resets the progress gauge for the current step.
      */
     void updateStepDisplay() {
-        action.setText(step.action + " for " + secToDuration(step.duration));
+        action.setText(step.action + " for " + Utils.secToDuration(step.duration));
         stepCount.setText((currentStep + 1) + " of " + workout.steps.length);
         stepProgress.setValue(0);
         stepProgress.setMaxValue(step.duration);
         if (currentStep > 0) {
-            playSound(step.action.toLowerCase());
+            Utils.playSound(step.action.toLowerCase());
             display.vibrate(1000);
         }
     }
@@ -136,30 +143,25 @@ public class Couch25K extends MIDlet implements CommandListener, PlayerListener 
     /** Updates step and workout progress display. */
     void updateProgressDisplay() {
         stepProgress.setValue(stepCounter);
-        stepTime.setText(secToTime(stepCounter));
+        stepTime.setText(Utils.secToTime(stepCounter));
         workoutProgress.setValue(workoutCounter);
-        workoutTime.setText(secToTime(workoutCounter));
+        workoutTime.setText(Utils.secToTime(workoutCounter));
     }
 
     // MIDlet UI ---------------------------------------------------------------
 
     Display display;
     Image tickImage;
-    Font boldUnderlinedFont;
-    Font bigBoldFont;
+    Font boldUnderlinedFont, bigBoldFont;
     List selectWeekScreen;
     List selectWorkoutScreen;
     Form workoutSummaryScreen;
     ImageItem completedIcon;
-    StringItem completedAt;
-    StringItem intervalsLabel;
+    StringItem completedAt, intervalsLabel;
     Form workoutScreen;
     StringItem action;
-    Gauge stepProgress;
-    StringItem stepCount;
-    StringItem stepTime;
-    Gauge workoutProgress;
-    StringItem workoutTime;
+    Gauge stepProgress, workoutProgress;
+    StringItem stepCount,stepTime, workoutTime;
     Form workoutCompleteScreen;
 
     // Commands
@@ -170,12 +172,14 @@ public class Couch25K extends MIDlet implements CommandListener, PlayerListener 
     Command markCompleteCommand = new Command("Mark Complete", Command.SCREEN, 2);
     Command pauseCommand = new Command("Pause", Command.SCREEN, 1);
     Command resumeCommand = new Command("Resume", Command.SCREEN, 1);
+    Command exitCommand = new Command("Exit", Command.EXIT, 1);
+    Command tweetCommand = new Command("Tweet", Command.SCREEN, 1);
 
     void initialiseUI() {
         display = Display.getDisplay(this);
         boldUnderlinedFont = Font.getFont(Font.FACE_PROPORTIONAL, Font.STYLE_BOLD, Font.SIZE_MEDIUM);
         bigBoldFont = Font.getFont(Font.FACE_PROPORTIONAL, Font.STYLE_BOLD, Font.SIZE_LARGE);
-        tickImage = loadImage("tick");
+        tickImage = Utils.loadImage("tick");
 
         // Week selection screen
         selectWeekScreen = new List("couch25k - Select Week", Choice.IMPLICIT);
@@ -228,7 +232,8 @@ public class Couch25K extends MIDlet implements CommandListener, PlayerListener 
 
         // Workout completion screen
         workoutCompleteScreen = new Form("Workout Complete");
-        workoutCompleteScreen.addCommand(backCommand);
+        workoutCompleteScreen.addCommand(exitCommand);
+        workoutCompleteScreen.addCommand(tweetCommand);
         workoutCompleteScreen.setCommandListener(this);
     }
 
@@ -268,7 +273,7 @@ public class Couch25K extends MIDlet implements CommandListener, PlayerListener 
         selectWorkoutScreen.deleteAll();
         for (int i = 0; i < week.workouts.length; i++) {
             selectWorkoutScreen.append(
-                "Workout " + (i + 1) + " - " + secToTime(week.workouts[i].totalDuration),
+                "Workout " + (i + 1) + " - " + Utils.secToTime(week.workouts[i].totalDuration),
                 (week.completedAt[i] != null ? tickImage : null));
         }
         if (!weekChanged) {
@@ -300,7 +305,7 @@ public class Couch25K extends MIDlet implements CommandListener, PlayerListener 
         // Completion details
         if (week.completedAt[selectedWorkout] != null) {
             workoutSummaryScreen.append(completedIcon);
-            completedAt.setText(formatDate(week.completedAt[selectedWorkout]));
+            completedAt.setText(Utils.formatDate(week.completedAt[selectedWorkout]));
             workoutSummaryScreen.append(completedAt);
         }
         // Workout steps
@@ -309,7 +314,7 @@ public class Couch25K extends MIDlet implements CommandListener, PlayerListener 
         for (int i = 0; i < workout.steps.length; i++) {
             StringItem stepDesc = new StringItem(null,
                 workout.steps[i].action + " for " +
-                secToDuration(workout.steps[i].duration) + "\n");
+                Utils.secToDuration(workout.steps[i].duration) + "\n");
             workoutSummaryScreen.append(stepDesc);
         }
         display.setCurrent(workoutSummaryScreen);
@@ -349,88 +354,31 @@ public class Couch25K extends MIDlet implements CommandListener, PlayerListener 
             workoutStore.completeWorkout(selectedWeek, selectedWorkout);
 
         display.setCurrent(workoutCompleteScreen);
-        playSound("finished");
+        Utils.playSound("finished");
         state = STATE_WORKOUT_COMPLETE;
+    }
+
+    void tweetCompletion() {
+        try {
+            String addr = "sms://" + (String)config.get(CONFIG_TWITTER_SMS);
+            MessageConnection conn = (MessageConnection)Connector.open(addr);
+            TextMessage msg =
+                (TextMessage)conn.newMessage(MessageConnection.TEXT_MESSAGE);
+            msg.setPayloadText(Utils.format((String)config.get(CONFIG_TWEET_TEMPLATE),
+                                            new String[] { workoutTitle() }));
+            conn.send(msg);
+            workoutCompleteScreen.removeCommand(tweetCommand);
+        } catch (InterruptedIOException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     // Utilities ---------------------------------------------------------------
 
-    /** Plays an MP3 file once. */
-    void playSound(String action) {
-        try {
-            InputStream in = getClass().getResourceAsStream("/" + action + ".mp3");
-            Player player = Manager.createPlayer(in, "audio/mpeg");
-            player.addPlayerListener(this);
-            player.start();
-        } catch (MediaException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    /** Loads an image file as an immutable Image. */
-    Image loadImage(String name) {
-        Image result = null;
-        try {
-            InputStream in = getClass().getResourceAsStream("/" + name + ".png");
-            result = Image.createImage(in);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return result;
-    }
-
-    /** Formats seconds as a duration description. */
-    String secToDuration(int n) {
-        if (n <= 90) {
-            return n + " seconds";
-        }
-        int min = n / 60;
-        int sec = n % 60;
-        if (sec == 0) {
-          return min + " minutes";
-        }
-        // Spare seconds in Couch-to-5k intervals all round nicely
-        return (min + (float)sec/60) + " minutes";
-    }
-
-    /** Formats seconds as a time in MM:SS format. */
-    String secToTime(int n) {
-        int minutes = n / 60;
-        int seconds = n % 60;
-        return pad(minutes) + ":" + pad(seconds);
-    }
-
-    static final String[] DAYS = new String[] {
-        "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"};
-    static final String[] MONTHS = new String[] {
-        "Jan", "Feb", "Mar", "Apr", "May", "June", "July", "Aug", "Sep", "Oct", "Nov", "Dec"};
-    static final String[] ORDINALS = new String[] {
-        "th", "st", "nd", "rd", "th", "th", "th", "th", "th", "th"};
-    String formatDate(Date date) {
-        Calendar cal = Calendar.getInstance();
-        int currentYear = cal.get(Calendar.YEAR);
-        cal.setTime(date);
-        StringBuffer sb = new StringBuffer();
-        sb.append(pad(cal.get(Calendar.HOUR))).append(":")
-          .append(pad(cal.get(Calendar.MINUTE))).append(", ")
-          .append(DAYS[cal.get(Calendar.DAY_OF_WEEK)]).append(" ")
-          .append(cal.get(Calendar.DAY_OF_MONTH))
-          .append(ORDINALS[cal.get(Calendar.DAY_OF_MONTH) % 10]).append(" ")
-          .append(MONTHS[cal.get(Calendar.MONTH)]);
-        if (cal.get(Calendar.YEAR)!= currentYear ) {
-            sb.append(" ").append(cal.get(Calendar.YEAR));
-        }
-        return sb.toString();
-    }
-
-    /** Pads a number with a leading zero if necessary. */
-    String pad(int n) {
-        if (n < 10) {
-            return "0" + n;
-        }
-        return "" + n;
+    String workoutTitle() {
+        return "Week " + (selectedWeek + 1) + " - Workout " + (selectedWorkout + 1);
     }
 
     // MIDlet API --------------------------------------------------------------
@@ -506,20 +454,16 @@ public class Couch25K extends MIDlet implements CommandListener, PlayerListener 
             if (c == resumeCommand) resumeWorkout();
             break;
         case STATE_WORKOUT_COMPLETE:
-            if (c == backCommand) showSelectWeekScreen();
+            if (c == exitCommand) {
+                try {
+                    destroyApp(false);
+                } catch (MIDletStateChangeException e) {
+                    e.printStackTrace();
+                }
+                notifyDestroyed();
+            }
+            if (c == tweetCommand) tweetCompletion();
             break;
-        }
-    }
-
-    // PlayerListener API ------------------------------------------------------
-
-    /**
-     * Close every Player we create once it reaches the end of its media, to
-     * free up resources.
-     */
-    public void playerUpdate(Player player, String event, Object eventData) {
-        if (event == PlayerListener.END_OF_MEDIA) {
-            player.close();
         }
     }
 }
