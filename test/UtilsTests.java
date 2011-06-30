@@ -23,17 +23,12 @@ public class UtilsTests extends TestCase {
     }
 
     public void formatDateTest() {
+        testDate("Date format", "23:59, Wed 30th June 2010", 23, 59, 30, Calendar.JUNE, 2010);
         Calendar cal = Calendar.getInstance();
         int currentYear = cal.get(Calendar.YEAR);
-        testDate("Current year should not display", "23:59, Thu 30th June", 23, 59, 30, 6, currentYear);
-        cal.set(Calendar.HOUR_OF_DAY, 23);
-        cal.set(Calendar.MINUTE, 59);
-        cal.set(Calendar.DAY_OF_MONTH, 30);
-        cal.set(Calendar.MONTH, 5);
-        cal.set(Calendar.YEAR, currentYear - 1);
-        testDate("Year should display if not current",
-                 "23:59, " + Utils.DAYS[cal.get(Calendar.DAY_OF_WEEK)] + " 30th June " + (currentYear - 1),
-                 23, 59, 30, 6, currentYear - 1);
+        if (currentYear == 2011) {
+            testDate("Year should not display for current year", "23:59, Thu 30th June", 23, 59, 30, Calendar.JUNE, 2011);
+        }
     }
 
     private void testDate(String test, String expected, int hour, int minute, int day, int month, int year) {
@@ -41,7 +36,7 @@ public class UtilsTests extends TestCase {
         cal.set(Calendar.HOUR_OF_DAY, hour);
         cal.set(Calendar.MINUTE, minute);
         cal.set(Calendar.DAY_OF_MONTH, day);
-        cal.set(Calendar.MONTH, month - 1);
+        cal.set(Calendar.MONTH, month);
         cal.set(Calendar.YEAR, year);
         assertEquals(test, expected, Utils.formatDate(cal.getTime()));
     }
