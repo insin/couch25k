@@ -16,6 +16,7 @@ import javax.microedition.lcdui.Gauge;
 import javax.microedition.lcdui.Image;
 import javax.microedition.lcdui.ImageItem;
 import javax.microedition.lcdui.Item;
+import javax.microedition.lcdui.ItemCommandListener;
 import javax.microedition.lcdui.List;
 import javax.microedition.lcdui.StringItem;
 import javax.microedition.midlet.MIDlet;
@@ -26,13 +27,15 @@ import javax.wireless.messaging.TextMessage;
 /**
  * Tracks jogging and walking intervals for the Couch-to-5k running program.
  */
-public class Couch25K extends MIDlet implements CommandListener {
-    static final int STATE_SELECT_WEEK = 1;
-    static final int STATE_SELECT_WORKOUT = 2;
-    static final int STATE_WORKOUT_SELECTED = 3;
-    static final int STATE_WORKOUT = 4;
-    static final int STATE_WORKOUT_PAUSED = 5;
-    static final int STATE_WORKOUT_COMPLETE = 6;
+public class Couch25K extends MIDlet implements CommandListener, ItemCommandListener {
+    static final int STATE_TITLE_SCREEN = 1;
+    static final int STATE_OPTIONS_SCREEN = 2;
+    static final int STATE_SELECT_WEEK = 3;
+    static final int STATE_SELECT_WORKOUT = 4;
+    static final int STATE_WORKOUT_SELECTED = 5;
+    static final int STATE_WORKOUT = 6;
+    static final int STATE_WORKOUT_PAUSED = 7;
+    static final int STATE_WORKOUT_COMPLETE = 8;
 
     static final String CONFIG_TWITTER_SMS = "twitterSMS";
     static final String CONFIG_TWEET_TEMPLATE = "tweetTemplate";
@@ -54,7 +57,7 @@ public class Couch25K extends MIDlet implements CommandListener {
     /** Active Workout configuration. */
     Workout workout;
     /** Configuration options. */
-    Hashtable config; // TODO Provide Options screen for editing configuration
+    Hashtable config;
     /** State persistence. */
     WorkoutStore workoutStore;
 
@@ -153,6 +156,8 @@ public class Couch25K extends MIDlet implements CommandListener {
     Display display;
     Image tickImage;
     Font boldUnderlinedFont, bigBoldFont;
+    Form titleScreen;
+    StringItem title, quickStartMenu, selectWorkoutMenu, optionsMenu, exitMenu;
     List selectWeekScreen;
     List selectWorkoutScreen;
     Form workoutSummaryScreen;
@@ -168,6 +173,7 @@ public class Couch25K extends MIDlet implements CommandListener {
     Command backCommand = new Command("Back", Command.BACK, 1);
     Command selectCommand = new Command("Select", Command.ITEM, 1);
     Command quickStartCommand = new Command("Quick Start", Command.SCREEN, 1);
+    Command optionsCommand = new Command("Options", Command.ITEM, 1);
     Command startCommand = new Command("Start", Command.SCREEN, 1);
     Command markCompleteCommand = new Command("Mark Complete", Command.SCREEN, 2);
     Command pauseCommand = new Command("Pause", Command.SCREEN, 1);
@@ -181,10 +187,37 @@ public class Couch25K extends MIDlet implements CommandListener {
         bigBoldFont = Font.getFont(Font.FACE_PROPORTIONAL, Font.STYLE_BOLD, Font.SIZE_LARGE);
         tickImage = Utils.loadImage("tick");
 
+        // Title screen
+        titleScreen = new Form("couch25k");
+        title = new StringItem(null, "\ncouch25k\n\n");
+        title.setFont(bigBoldFont);
+        title.setLayout(Item.LAYOUT_CENTER);
+        quickStartMenu = new StringItem(null, "Quick Start\n", StringItem.HYPERLINK);
+        quickStartMenu.setLayout(Item.LAYOUT_CENTER);
+        quickStartMenu.addCommand(quickStartCommand);
+        quickStartMenu.setItemCommandListener(this);
+        selectWorkoutMenu = new StringItem(null, "Select Workout\n", StringItem.HYPERLINK);
+        selectWorkoutMenu.setLayout(Item.LAYOUT_CENTER);
+        selectWorkoutMenu.addCommand(selectCommand);
+        selectWorkoutMenu.setItemCommandListener(this);
+        optionsMenu = new StringItem(null, "Options\n", StringItem.HYPERLINK);
+        optionsMenu.setLayout(Item.LAYOUT_CENTER);
+        optionsMenu.addCommand(optionsCommand);
+        optionsMenu.setItemCommandListener(this);
+        exitMenu = new StringItem(null, "Exit", StringItem.HYPERLINK);
+        exitMenu.setLayout(Item.LAYOUT_CENTER);
+        exitMenu.addCommand(exitCommand);
+        exitMenu.setItemCommandListener(this);
+        titleScreen.append(title);
+        titleScreen.append(quickStartMenu);
+        titleScreen.append(selectWorkoutMenu);
+        titleScreen.append(optionsMenu);
+        titleScreen.append(exitMenu);
+
         // Week selection screen
         selectWeekScreen = new List("couch25k - Select Week", Choice.IMPLICIT);
         selectWeekScreen.setSelectCommand(selectCommand);
-        selectWeekScreen.addCommand(quickStartCommand);
+        selectWeekScreen.addCommand(backCommand);
         selectWeekScreen.setCommandListener(this);
 
         // Workout selection screen
@@ -232,12 +265,35 @@ public class Couch25K extends MIDlet implements CommandListener {
 
         // Workout completion screen
         workoutCompleteScreen = new Form("Workout Complete");
-        workoutCompleteScreen.addCommand(exitCommand);
+        workoutCompleteScreen.addCommand(backCommand);
         workoutCompleteScreen.addCommand(tweetCommand);
         workoutCompleteScreen.setCommandListener(this);
     }
 
     // State transitions -------------------------------------------------------
+
+    void showTitleScreen() {
+        display.setCurrent(titleScreen);
+        state = STATE_TITLE_SCREEN;
+    }
+
+    void quickStart() {
+        for (int i = 0; i < weeks.length; i++) {
+            if (!weeks[i].isCompleted()) {
+                weekChanged = (selectedWeek != i);
+                selectedWeek = i;
+                week = weeks[i];
+                selectedWorkout = week.firstIncompleteIndex();
+                workout = week.workouts[selectedWorkout];
+                showWorkoutSummaryScreen();
+                return;
+            }
+        }
+    }
+
+    void showOptionsScreen() {
+        // TODO Implement options screen
+    }
 
     void showSelectWeekScreen() {
         boolean allCompleted = true;
@@ -286,15 +342,6 @@ public class Couch25K extends MIDlet implements CommandListener {
     void selectWorkout() {
         selectedWorkout = selectWorkoutScreen.getSelectedIndex();
         workout = week.workouts[selectedWorkout];
-        showWorkoutSummaryScreen();
-    }
-
-    void quickStart(int weekIndex, int workoutIndex) {
-        weekChanged = (selectedWeek != weekIndex);
-        selectedWeek = weekIndex;
-        week = weeks[weekIndex];
-        selectedWorkout = workoutIndex;
-        workout = week.workouts[workoutIndex];
         showWorkoutSummaryScreen();
     }
 
@@ -375,6 +422,15 @@ public class Couch25K extends MIDlet implements CommandListener {
         }
     }
 
+    void exit() {
+        try {
+            destroyApp(false);
+        } catch (MIDletStateChangeException e) {
+            e.printStackTrace();
+        }
+        notifyDestroyed();
+    }
+
     // Utilities ---------------------------------------------------------------
 
     String workoutTitle() {
@@ -393,7 +449,7 @@ public class Couch25K extends MIDlet implements CommandListener {
         if (state == STATE_WORKOUT_PAUSED) {
             resumeWorkout();
         } else {
-            showSelectWeekScreen();
+            showTitleScreen();
         }
     }
 
@@ -409,7 +465,7 @@ public class Couch25K extends MIDlet implements CommandListener {
         workoutStore.close();
     }
 
-    // CommandListener API -----------------------------------------------------
+    // CommandListener / ItemCommandListener API -------------------------------
 
     /**
      * Calls the appropriate transition method based on the current state and
@@ -419,17 +475,7 @@ public class Couch25K extends MIDlet implements CommandListener {
         switch (state) {
         case STATE_SELECT_WEEK:
             if (c == selectCommand) selectWeek();
-            if (c == quickStartCommand) {
-                for (int i = 0; i < weeks.length; i++) {
-                    if (weeks[i].isCompleted()) continue;
-                    for (int j = 0; j < weeks[i].workouts.length; j++) {
-                        if (weeks[i].completedAt[j] == null) {
-                            quickStart(i, j);
-                            return;
-                        }
-                    }
-                }
-            }
+            if (c == backCommand) showTitleScreen();
             break;
         case STATE_SELECT_WORKOUT:
             if (c == selectCommand) selectWorkout();
@@ -454,16 +500,16 @@ public class Couch25K extends MIDlet implements CommandListener {
             if (c == resumeCommand) resumeWorkout();
             break;
         case STATE_WORKOUT_COMPLETE:
-            if (c == exitCommand) {
-                try {
-                    destroyApp(false);
-                } catch (MIDletStateChangeException e) {
-                    e.printStackTrace();
-                }
-                notifyDestroyed();
-            }
+            if (c == backCommand) showTitleScreen();
             if (c == tweetCommand) tweetCompletion();
             break;
         }
+    }
+
+    public void commandAction(Command c, Item item) {
+        if (item == quickStartMenu) quickStart();
+        if (item == selectWorkoutMenu) showSelectWeekScreen();
+        if (item == optionsMenu) showOptionsScreen();
+        if (item == exitMenu) exit();
     }
 }
