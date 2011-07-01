@@ -3,7 +3,7 @@ MIDlet-Jar-URL: couch25k.jar
 MicroEdition-Configuration: CLDC-1.1
 MIDlet-Version: 0.5
 MIDlet-Name: couch25k
-MIDlet-Description: tracks intervals for the Couch-to-5k running program
+MIDlet-Description: Tracks intervals for the Couch-to-5k running program
 MIDlet-Vendor: insin
 MIDlet-Info-URL: https://github.com/insin/couch25k
 MicroEdition-Profile: MIDP-2.0

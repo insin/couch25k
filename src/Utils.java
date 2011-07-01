@@ -32,7 +32,7 @@ public class Utils {
     }
 
     static final String[] DAYS = new String[] {
-        "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"};
+        "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
     static final String[] MONTHS = new String[] {
         "Jan", "Feb", "Mar", "Apr", "May", "June", "July", "Aug", "Sep", "Oct", "Nov", "Dec"};
     static final String[] ORDINALS = new String[] {
@@ -44,7 +44,7 @@ public class Utils {
         StringBuffer sb = new StringBuffer();
         sb.append(pad(cal.get(Calendar.HOUR_OF_DAY))).append(":")
           .append(pad(cal.get(Calendar.MINUTE))).append(", ")
-          .append(DAYS[cal.get(Calendar.DAY_OF_WEEK)]).append(" ")
+          .append(DAYS[cal.get(Calendar.DAY_OF_WEEK) - 1]).append(" ")
           .append(cal.get(Calendar.DAY_OF_MONTH))
           .append(ORDINALS[cal.get(Calendar.DAY_OF_MONTH) % 10]).append(" ")
           .append(MONTHS[cal.get(Calendar.MONTH)]);
