@@ -275,7 +275,7 @@ public class Couch25K extends MIDlet implements CommandListener, ItemCommandList
 
         // Workout summary screen
         workoutSummaryScreen = new Form("");
-        completedIcon = new ImageItem("Completed", tickImage, Item.LAYOUT_CENTER, null);
+        completedIcon = new ImageItem("Completed", tickImage, Item.LAYOUT_CENTER | Item.LAYOUT_NEWLINE_AFTER, null);
         completedAt = new StringItem(null, "");
         completedAt.setLayout(Item.LAYOUT_CENTER);
         intervalsLabel = new StringItem(null, "");
