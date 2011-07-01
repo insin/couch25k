@@ -43,6 +43,8 @@ public class Couch25K extends MIDlet implements CommandListener, ItemCommandList
     static final int STATE_WORKOUT_PAUSED = 8;
     static final int STATE_WORKOUT_COMPLETE = 9;
 
+    static final String CONFIG_TWITTER_USERNAME = "twitterUsername";
+    static final String CONFIG_TWITTER_PASSWORD = "twitterPassword";
     static final String CONFIG_TWEET_TEMPLATE = "tweetTemplate";
 
     // MIDlet state ------------------------------------------------------------
@@ -72,11 +74,11 @@ public class Couch25K extends MIDlet implements CommandListener, ItemCommandList
         weeks = Workouts.getWorkouts();
         workoutStore = new WorkoutStore();
         workoutStore.setCompletion(weeks);
-		config = workoutStore.loadConfig();
-		if (config.size() == 0) {
-	        config = new Hashtable();
-	        config.put(CONFIG_TWEET_TEMPLATE, "Completed $1 of #couchto5k");
-		}
+        config = workoutStore.loadConfig();
+        if (config.size() == 0) {
+            config = new Hashtable();
+            config.put(CONFIG_TWEET_TEMPLATE, "Completed $1 of #couchto5k");
+        }
 
         // Load Twitter authentication details, if available
         try {
@@ -174,7 +176,7 @@ public class Couch25K extends MIDlet implements CommandListener, ItemCommandList
     Form titleScreen;
     StringItem title, quickStartMenu, selectWorkoutMenu, optionsMenu, exitMenu;
     Form optionsScreen;
-    TextField twitterSMS;
+    TextField twitterUsername, twitterPassword;
     StringItem tweetTemplate;
     StringItem editTweetMenu;
     TextBox editTweetTemplate;
@@ -242,9 +244,12 @@ public class Couch25K extends MIDlet implements CommandListener, ItemCommandList
 
         // Options screen
         optionsScreen = new Form("couch25k Options");
-        twitterSMS = new TextField("Twitter SMS Number",
-                                   (String)config.get(CONFIG_TWITTER_SMS),
-                                   11, TextField.NUMERIC);
+        twitterUsername = new TextField("Twitter Username",
+                (String)config.get(CONFIG_TWITTER_USERNAME),
+                32, TextField.ANY);
+        twitterPassword = new TextField("Twitter Password",
+                (String)config.get(CONFIG_TWITTER_PASSWORD),
+                32, TextField.ANY | TextField.PASSWORD);
         tweetTemplate = new StringItem("Tweet Template\n",
                                        (String)config.get(CONFIG_TWEET_TEMPLATE));
         editTweetMenu = new StringItem(null, "Edit\n", Item.BUTTON);
@@ -254,7 +259,8 @@ public class Couch25K extends MIDlet implements CommandListener, ItemCommandList
         StringItem tweetTemplateHint = new StringItem(null, "$1: Week X - Workout Y");
         tweetTemplateHint.setFont(smallFont);
         tweetTemplateHint.setLayout(Item.LAYOUT_LEFT);
-        optionsScreen.append(twitterSMS);
+        optionsScreen.append(twitterUsername);
+        optionsScreen.append(twitterPassword);
         optionsScreen.append(tweetTemplate);
         optionsScreen.append(editTweetMenu);
         optionsScreen.append(tweetTemplateHint);
@@ -360,15 +366,18 @@ public class Couch25K extends MIDlet implements CommandListener, ItemCommandList
     }
 
     void saveOptions() {
-        config.put(CONFIG_TWITTER_SMS, twitterSMS.getString());
+        config.put(CONFIG_TWITTER_USERNAME, twitterUsername.getString());
+        config.put(CONFIG_TWITTER_PASSWORD, twitterPassword.getString());
         config.put(CONFIG_TWEET_TEMPLATE, editTweetTemplate.getString());
         workoutStore.saveConfig(config);
         showTitleScreen();
     }
 
     void cancelOptions() {
-        twitterSMS.delete(0, twitterSMS.size());
-        twitterSMS.insert((String)config.get(CONFIG_TWITTER_SMS), 0);
+        twitterUsername.delete(0, twitterUsername.size());
+        twitterUsername.insert((String)config.get(CONFIG_TWITTER_USERNAME), 0);
+        twitterPassword.delete(0, twitterPassword.size());
+        twitterPassword.insert((String)config.get(CONFIG_TWITTER_PASSWORD), 0);
         editTweetTemplate.delete(0, editTweetTemplate.size());
         editTweetTemplate.insert((String)config.get(CONFIG_TWEET_TEMPLATE), 0);
         tweetTemplate.setText((String)config.get(CONFIG_TWEET_TEMPLATE));
