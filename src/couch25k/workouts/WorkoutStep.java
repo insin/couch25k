@@ -1,3 +1,5 @@
+package couch25k.workouts;
+
 public class WorkoutStep {
     public String action;
     public int duration;
