@@ -26,7 +26,7 @@ public class WorkoutView {
 
     public boolean isWeekComplete(int week) {
         int weekStart = week * WORKOUTS_PER_WEEK;
-        int weekEnd = weekStart + 3;
+        int weekEnd = weekStart + WORKOUTS_PER_WEEK;
         for (int i = weekStart; i < weekEnd; i++) {
             if (completionDates[i] == null) {
                 return false;
