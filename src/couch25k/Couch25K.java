@@ -71,7 +71,7 @@ public class Couch25K extends MIDlet implements CommandListener, ItemCommandList
     boolean weekChanged;
     /** Index of selected workout on the Select Workout screen. */
     int selectedWorkout;
-    /** Index of selected workout on the Select Workout screen. */
+    /** Selected workout details. */
     Workout workout;
 
     void initialiseState() {
