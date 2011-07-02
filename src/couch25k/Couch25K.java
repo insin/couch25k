@@ -1,4 +1,7 @@
+package couch25k;
+
 import java.io.IOException;
+import java.util.Date;
 import java.util.Hashtable;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -29,6 +32,14 @@ import com.twitterapime.search.LimitExceededException;
 import com.twitterapime.search.Tweet;
 import com.twitterapime.xauth.Token;
 
+import couch25k.utils.IntervalParser;
+import couch25k.utils.MediaUtils;
+import couch25k.utils.NumberUtils;
+import couch25k.utils.StringUtils;
+import couch25k.workouts.Workout;
+import couch25k.workouts.WorkoutStep;
+import couch25k.workouts.WorkoutView;
+
 /**
  * Tracks jogging and walking intervals for the Couch-to-5k running program.
  */
@@ -49,32 +60,30 @@ public class Couch25K extends MIDlet implements CommandListener, ItemCommandList
 
     // MIDlet state ------------------------------------------------------------
 
+    /** Configuration options. */
+    Hashtable config;
+    /** State persistence. */
+    Couch25KStore store;
+
     /** Current app state. */
     int state;
     /** Workout configuration and completion status. */
-    Week[] weeks;
+    WorkoutView workouts;
     /** Index of selected week on the Select Week screen. */
     int selectedWeek;
     /** Has the week changed since the Select Workout screen was last shown? */
     boolean weekChanged;
-    /** Workout configuration for the selected week. */
-    Week week;
     /** Index of selected workout on the Select Workout screen. */
     int selectedWorkout;
-    /** Active Workout configuration. */
+    /** Index of selected workout on the Select Workout screen. */
     Workout workout;
-    /** Configuration options. */
-    Hashtable config;
-    /** State persistence. */
-    WorkoutStore workoutStore;
     /** OAuth authentication details for Twitter. */
     TwitterKeys twitterKeys;
 
     void initialiseState() {
-        weeks = Workouts.getWorkouts();
-        workoutStore = new WorkoutStore();
-        workoutStore.setCompletion(weeks);
-        config = workoutStore.loadConfig();
+        store = new Couch25KStore();
+        // Load configuration options
+        config = store.loadConfig();
         if (config.size() == 0) {
             config = new Hashtable();
             config.put(CONFIG_TWEET_TEMPLATE, "Completed $1 of #couchto5k");
@@ -86,6 +95,10 @@ public class Couch25K extends MIDlet implements CommandListener, ItemCommandList
         } catch (Exception e) {
             // Twitter keys not available
         }
+        // Load workout intervals and completion status
+        int[][] intervals = new IntervalParser().parseIntervals("intervals.txt");
+        Date[] completionDates = store.loadCompletionDates(intervals.length);
+        workouts = new WorkoutView(intervals, completionDates);
     }
 
     // Workout tracking --------------------------------------------------------
@@ -150,12 +163,13 @@ public class Couch25K extends MIDlet implements CommandListener, ItemCommandList
      * Updates step display and resets the progress gauge for the current step.
      */
     void updateStepDisplay() {
-        action.setText(step.action + " for " + Utils.secToDuration(step.duration));
+        action.setText(step.action + " for " +
+                       NumberUtils.secToDuration(step.duration));
         stepCount.setText((currentStep + 1) + " of " + workout.steps.length);
         stepProgress.setValue(0);
         stepProgress.setMaxValue(step.duration);
         if (currentStep > 0) {
-            Utils.playSound(step.action.toLowerCase());
+            MediaUtils.playSound(step.action.toLowerCase());
             display.vibrate(1000);
         }
     }
@@ -163,9 +177,9 @@ public class Couch25K extends MIDlet implements CommandListener, ItemCommandList
     /** Updates step and workout progress display. */
     void updateProgressDisplay() {
         stepProgress.setValue(stepCounter);
-        stepTime.setText(Utils.secToTime(stepCounter));
+        stepTime.setText(NumberUtils.secToTime(stepCounter));
         workoutProgress.setValue(workoutCounter);
-        workoutTime.setText(Utils.secToTime(workoutCounter));
+        workoutTime.setText(NumberUtils.secToTime(workoutCounter));
     }
 
     // MIDlet UI ---------------------------------------------------------------
@@ -213,7 +227,7 @@ public class Couch25K extends MIDlet implements CommandListener, ItemCommandList
         mediumBoldFont = Font.getFont(Font.FACE_PROPORTIONAL, Font.STYLE_BOLD, Font.SIZE_MEDIUM);
         bigBoldFont = Font.getFont(Font.FACE_PROPORTIONAL, Font.STYLE_BOLD, Font.SIZE_LARGE);
         smallFont = Font.getFont(Font.FACE_PROPORTIONAL, Font.STYLE_PLAIN, Font.SIZE_SMALL);
-        tickImage = Utils.loadImage("tick");
+        tickImage = MediaUtils.loadImage("tick");
 
         // Title screen
         titleScreen = new Form("couch25k");
@@ -342,16 +356,14 @@ public class Couch25K extends MIDlet implements CommandListener, ItemCommandList
 
     /** Opens the workout summary screen with the first incomplete workout. */
     void quickStart() {
-        for (int i = 0; i < weeks.length; i++) {
-            if (!weeks[i].isCompleted()) {
-                weekChanged = (selectedWeek != i);
-                selectedWeek = i;
-                week = weeks[i];
-                selectedWorkout = week.firstIncompleteIndex();
-                workout = week.workouts[selectedWorkout];
-                showWorkoutSummaryScreen();
-                return;
-            }
+        Workout nextWorkout = workouts.getFirstInCompleteWorkout();
+        if (nextWorkout != null) {
+            weekChanged = (selectedWeek != nextWorkout.week);
+            selectedWeek = nextWorkout.week;
+            selectedWorkout = nextWorkout.workout;
+            workout = nextWorkout;
+            showWorkoutSummaryScreen();
+            return;
         }
     }
 
@@ -369,7 +381,7 @@ public class Couch25K extends MIDlet implements CommandListener, ItemCommandList
         config.put(CONFIG_TWITTER_USERNAME, twitterUsername.getString());
         config.put(CONFIG_TWITTER_PASSWORD, twitterPassword.getString());
         config.put(CONFIG_TWEET_TEMPLATE, editTweetTemplate.getString());
-        workoutStore.saveConfig(config);
+        store.saveConfig(config);
         showTitleScreen();
     }
 
@@ -387,8 +399,8 @@ public class Couch25K extends MIDlet implements CommandListener, ItemCommandList
     void showSelectWeekScreen() {
         boolean allCompleted = true;
         selectWeekScreen.deleteAll();
-        for (int i = 0; i < weeks.length; i++) {
-            boolean weekCompleted = weeks[i].isCompleted();
+        for (int i = 0; i < workouts.getWeekCount(); i++) {
+            boolean weekCompleted = workouts.isWeekComplete(i);
             selectWeekScreen.append(
                 "Week " + (i + 1),
                 weekCompleted ? tickImage : null);
@@ -408,7 +420,6 @@ public class Couch25K extends MIDlet implements CommandListener, ItemCommandList
     void selectWeek() {
         weekChanged = (selectedWeek != selectWeekScreen.getSelectedIndex());
         selectedWeek = selectWeekScreen.getSelectedIndex();
-        week = weeks[selectedWeek];
         showSelectWorkoutScreen();
     }
 
@@ -416,10 +427,11 @@ public class Couch25K extends MIDlet implements CommandListener, ItemCommandList
         selectWorkoutScreen.setTitle("Week " + (selectedWeek + 1) +
                                      " - Select Workout");
         selectWorkoutScreen.deleteAll();
-        for (int i = 0; i < week.workouts.length; i++) {
+        for (int i = 0; i < WorkoutView.WORKOUTS_PER_WEEK; i++) {
             selectWorkoutScreen.append(
-                "Workout " + (i + 1) + " - " + Utils.secToTime(week.workouts[i].totalDuration),
-                (week.completedAt[i] != null ? tickImage : null));
+                "Workout " + (i + 1) + " - " +
+                NumberUtils.secToTime(workouts.getWorkoutDuration(selectedWeek, i)),
+                (workouts.isWorkoutComplete(selectedWeek, i) ? tickImage : null));
         }
         if (!weekChanged) {
             selectWorkoutScreen.setSelectedIndex(selectedWorkout, true);
@@ -430,7 +442,7 @@ public class Couch25K extends MIDlet implements CommandListener, ItemCommandList
 
     void selectWorkout() {
         selectedWorkout = selectWorkoutScreen.getSelectedIndex();
-        workout = week.workouts[selectedWorkout];
+        workout = workouts.getWorkout(selectedWeek, selectedWorkout);
         showWorkoutSummaryScreen();
     }
 
@@ -439,9 +451,9 @@ public class Couch25K extends MIDlet implements CommandListener, ItemCommandList
                                       " - Workout " + (selectedWorkout + 1));
         workoutSummaryScreen.deleteAll();
         // Completion details
-        if (week.completedAt[selectedWorkout] != null) {
+        if (workout.completedAt != null) {
             workoutSummaryScreen.append(completedIcon);
-            completedAt.setText(Utils.formatDate(week.completedAt[selectedWorkout]));
+            completedAt.setText(StringUtils.formatDate(workout.completedAt));
             workoutSummaryScreen.append(completedAt);
         }
         // Workout steps
@@ -450,7 +462,7 @@ public class Couch25K extends MIDlet implements CommandListener, ItemCommandList
         for (int i = 0; i < workout.steps.length; i++) {
             StringItem stepDesc = new StringItem(null,
                 workout.steps[i].action + " for " +
-                Utils.secToDuration(workout.steps[i].duration) + "\n");
+                NumberUtils.secToDuration(workout.steps[i].duration) + "\n");
             workoutSummaryScreen.append(stepDesc);
         }
         display.setCurrent(workoutSummaryScreen);
@@ -462,7 +474,7 @@ public class Couch25K extends MIDlet implements CommandListener, ItemCommandList
 
         workoutScreen.setTitle("Week " + (selectedWeek + 1) +
                                " - Workout " + (selectedWorkout + 1));
-        workoutProgress.setMaxValue(workout.totalDuration);
+        workoutProgress.setMaxValue(workout.duration);
         workoutProgress.setValue(0);
         display.setCurrent(workoutScreen);
         trackWorkoutState(this);
@@ -484,13 +496,18 @@ public class Couch25K extends MIDlet implements CommandListener, ItemCommandList
         state = STATE_WORKOUT;
     }
 
+    void markWorkoutCompleted(int week, int workout) {
+        Date completionDate = new Date();
+        store.completeWorkout(week, workout, completionDate);
+        workouts.completeWorkout(week, workout, completionDate);
+    }
+
     void finishWorkout() {
         workoutTimer.cancel();
-        week.completedAt[selectedWorkout] =
-            workoutStore.completeWorkout(selectedWeek, selectedWorkout);
+        markWorkoutCompleted(selectedWeek, selectedWorkout);
 
         display.setCurrent(workoutCompleteScreen);
-        Utils.playSound("finished");
+        MediaUtils.playSound("finished");
         state = STATE_WORKOUT_COMPLETE;
     }
 
@@ -504,7 +521,7 @@ public class Couch25K extends MIDlet implements CommandListener, ItemCommandList
                                           tok);
             UserAccountManager m = UserAccountManager.getInstance(c);
             if (m.verifyCredential()) {
-                String text = Utils.format(
+                String text = StringUtils.format(
                     (String)config.get(CONFIG_TWEET_TEMPLATE),
                     new String[] { workoutTitle() });
                 Tweet t = new Tweet(text);
@@ -559,7 +576,7 @@ public class Couch25K extends MIDlet implements CommandListener, ItemCommandList
 
     protected void destroyApp(boolean unconditional)
         throws MIDletStateChangeException {
-        workoutStore.close();
+        store.close();
     }
 
     // CommandListener / ItemCommandListener API -------------------------------
@@ -588,12 +605,11 @@ public class Couch25K extends MIDlet implements CommandListener, ItemCommandList
             if (c == selectCommand) selectWorkout();
             if (c == backCommand) showSelectWeekScreen();
             if (c == markCompleteCommand) {
-                int selectedWorkout = selectWorkoutScreen.getSelectedIndex();
-                week.completedAt[selectedWorkout] =
-                    workoutStore.completeWorkout(selectedWeek, selectedWorkout);
+                int highlightedWorkout = selectWorkoutScreen.getSelectedIndex();
+                markWorkoutCompleted(selectedWeek, highlightedWorkout);
                 // Redraw lazily
                 showSelectWorkoutScreen();
-                selectWorkoutScreen.setSelectedIndex(selectedWorkout, true);
+                selectWorkoutScreen.setSelectedIndex(highlightedWorkout, true);
             }
             break;
         case STATE_WORKOUT_SELECTED:

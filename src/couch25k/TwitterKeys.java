@@ -1,3 +1,5 @@
+package couch25k;
+
 public interface TwitterKeys {
     public String getUserName();
     public String getConsumerKey();
