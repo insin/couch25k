@@ -9,28 +9,49 @@ My initial attempts at searching for something which implemented the
 above for my bog-standard mobile phone indicated that it would likely be
 easier to write it than find it, so I started doing just that.
 
-Display will be tweaked for my Samsung S3100, depending on what it does
-when I load this thing up.
+Display and audio may be tweaked specifically for my Samsung S3100,
+depending on what it does when I load this thing up.
 
 Implemented
 ===========
 
+*Features which are implemented, in implementation order.*
+
 * Selection of Week and Workout.
 * Display of current workout step (Walk or Jog) with status and timing
-  for the step and workout.
+  for the step and overall workout.
 * Workouts can be paused and resumed.
 * Plays a sound and vibrates when changing interval.
 * Stores completion status and date for each workout.
 * Quick Start jumps to first incomplete workout.
-* Tweet completion of workouts via SMS - number and message are configurable.
+* Tweet completion of workouts via SMS - SMS number and message are
+  configurable. You must register your phone number with your Twitter
+  account if you want to make use of this feature.
+* Optionally plays a minute marker sound - defaults to on.
 
 Planned
 =======
 
 *(In order of usefulness descending/superfluousness ascending)*
 
-* Tweeting via xAuth, identifying as a Twitter app - need to request xAuth permission via email O_o
 * Animate a sprite indicating what the current step is.
+* Some sort of victory animation on the finish screen.
+
+In Limbo
+========
+
+* Tweeting via xAuth, identifying as a Twitter app.
+
+  * This is currently implemented in the `twitter-oauth branch`_ but to
+    make it publicly usable, I would need to beg permission for my Twitter
+    app to use xAuth permission via email O_o
+
+  * If you want to use this feature, you need to register your own Twitter
+    app, create your own ``TwitterKeysImpl`` class which implements the
+    `TwitterKeys interface`_ and build your own .jad/.jar files.
+
+.. _`twitter-oauth branch`: https://github.com/insin/couch25k/tree/twitter-oauth
+.. _`TwitterKeys interface`: https://github.com/insin/couch25k/blob/twitter-oauth/src/couch25k/TwitterKeys.java
 
 Building
 ========
