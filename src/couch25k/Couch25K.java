@@ -9,6 +9,7 @@ import java.util.TimerTask;
 
 import javax.microedition.io.Connector;
 import javax.microedition.lcdui.Choice;
+import javax.microedition.lcdui.ChoiceGroup;
 import javax.microedition.lcdui.Command;
 import javax.microedition.lcdui.CommandListener;
 import javax.microedition.lcdui.Display;
@@ -51,6 +52,9 @@ public class Couch25K extends MIDlet implements CommandListener, ItemCommandList
     static final int STATE_WORKOUT_PAUSED = 8;
     static final int STATE_WORKOUT_COMPLETE = 9;
 
+    static final String OPTION_ON = "On";
+    static final String OPTION_OFF = "Off";
+    static final String CONFIG_MINUTE_MARKER = "minuteMarker";
     static final String CONFIG_TWITTER_SMS = "twitterSMS";
     static final String CONFIG_TWEET_TEMPLATE = "tweetTemplate";
 
@@ -80,6 +84,7 @@ public class Couch25K extends MIDlet implements CommandListener, ItemCommandList
         config = store.loadConfig();
         if (config.size() == 0) {
             config = new Hashtable();
+            config.put(CONFIG_MINUTE_MARKER, OPTION_ON);
             config.put(CONFIG_TWITTER_SMS, "86444");
             config.put(CONFIG_TWEET_TEMPLATE,
                        "Completed $1 of #couchto5k");
@@ -169,6 +174,17 @@ public class Couch25K extends MIDlet implements CommandListener, ItemCommandList
         stepTime.setText(NumberUtils.secToTime(stepCounter));
         workoutProgress.setValue(workoutCounter);
         workoutTime.setText(NumberUtils.secToTime(workoutCounter));
+        // Play the minute marker sound if appropriate
+        if (useMinuteMarker() && stepCounter > 0 && stepCounter % 60 == 0) {
+            MediaUtils.playSound("minute");
+        }
+    }
+
+    /**
+     * Determines if we're currently configured to play a minute marker sound.
+     */
+    boolean useMinuteMarker() {
+        return OPTION_ON.equals((String)config.get(CONFIG_MINUTE_MARKER));
     }
 
     // MIDlet UI ---------------------------------------------------------------
@@ -179,6 +195,7 @@ public class Couch25K extends MIDlet implements CommandListener, ItemCommandList
     Form titleScreen;
     StringItem title, quickStartMenu, selectWorkoutMenu, optionsMenu, exitMenu;
     Form optionsScreen;
+    ChoiceGroup options;
     TextField twitterSMS;
     StringItem tweetTemplate;
     StringItem editTweetMenu;
@@ -247,6 +264,9 @@ public class Couch25K extends MIDlet implements CommandListener, ItemCommandList
 
         // Options screen
         optionsScreen = new Form("couch25k Options");
+        options = new ChoiceGroup(null, Choice.MULTIPLE);
+        options.append("Minute marker", null);
+        options.setSelectedIndex(0, useMinuteMarker());
         twitterSMS = new TextField("Twitter SMS Number",
                                    (String)config.get(CONFIG_TWITTER_SMS),
                                    11, TextField.NUMERIC);
@@ -259,6 +279,7 @@ public class Couch25K extends MIDlet implements CommandListener, ItemCommandList
         StringItem tweetTemplateHint = new StringItem(null, "$1: Week X - Workout Y");
         tweetTemplateHint.setFont(smallFont);
         tweetTemplateHint.setLayout(Item.LAYOUT_LEFT);
+        optionsScreen.append(options);
         optionsScreen.append(twitterSMS);
         optionsScreen.append(tweetTemplate);
         optionsScreen.append(editTweetMenu);
@@ -361,6 +382,8 @@ public class Couch25K extends MIDlet implements CommandListener, ItemCommandList
     }
 
     void saveOptions() {
+        config.put(CONFIG_MINUTE_MARKER,
+                   options.isSelected(0) ? OPTION_ON : OPTION_OFF);
         config.put(CONFIG_TWITTER_SMS, twitterSMS.getString());
         config.put(CONFIG_TWEET_TEMPLATE, editTweetTemplate.getString());
         store.saveConfig(config);
