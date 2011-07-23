@@ -44,7 +44,7 @@ In Limbo
 
   * This is currently implemented in the `twitter-oauth branch`_ but to
     make it publicly usable, I would need to beg permission for my Twitter
-    app to use xAuth permission via email O_o
+    app to use xAuth authentication via email O_o
 
   * If you want to use this feature, you need to register your own Twitter
     app, create your own ``TwitterKeysImpl`` class which implements the
