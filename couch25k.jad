@@ -1,10 +1,10 @@
-MIDlet-1: couch25k,,Couch25K
+MIDlet-1: couch25k,,couch25k.Couch25K
 MIDlet-Description: Tracks intervals for the Couch-to-5k running program
 MIDlet-Info-URL: https://github.com/insin/couch25k
-MIDlet-Jar-Size: 171283
+MIDlet-Jar-Size: 195498
 MIDlet-Jar-URL: couch25k.jar
 MIDlet-Name: couch25k
 MIDlet-Vendor: insin
-MIDlet-Version: 0.5
+MIDlet-Version: 0.6
 MicroEdition-Configuration: CLDC-1.1
 MicroEdition-Profile: MIDP-2.0
