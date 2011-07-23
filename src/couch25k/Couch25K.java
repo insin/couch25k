@@ -637,7 +637,10 @@ public class Couch25K extends MIDlet implements CommandListener, ItemCommandList
             break;
         case STATE_WORKOUT_SELECTED:
             if (c == startCommand) startWorkout();
-            if (c == backCommand) showSelectWorkoutScreen();
+            if (c == backCommand) {
+              weekChanged = false;
+              showSelectWorkoutScreen();
+            }
             break;
         case STATE_WORKOUT:
             if (c == pauseCommand) pauseWorkout();
