@@ -111,7 +111,7 @@ public class Couch25KStore {
                 // Get the record's id
                 int recordId = re.nextRecordId();
                 // Determine which option the record id corresponds to
-                DataInputStream inputStream = getDataInputStream(re.nextRecord());
+                DataInputStream inputStream = getDataInputStream(options.getRecord(recordId));
                 String option = inputStream.readUTF();
                 // Update the record with the new option value
                 byte[] b = getOptionBytes(option, (String)config.get(option));
