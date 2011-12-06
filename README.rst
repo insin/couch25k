@@ -56,7 +56,8 @@ In Limbo
 Building
 ========
 
-Built using `Eclipse`_, the `MTJ plugin`_ and the `Java ME SDK 3.0`_.
+Built using `Eclipse`_, the `MTJ plugin`_ and the `Java ME SDK 3.0`_ (or the
+`Sun Java Wireless Toolkit 2.5.2_01 for CLDC` on Linux).
 
 I had to manually remove midp_1.0.jar and cldc_1.0.jar from the phone
 configuration MTJ picked up from the Java ME SDK in order to successfully
@@ -66,3 +67,4 @@ compile using more recent features, but your mileage may vary.
 .. _`Eclipse`: http://www.eclipse.org
 .. _`MTJ plugin`: http://www.eclipse.org/mtj/
 .. _`Java ME SDK 3.0`: http://www.oracle.com/technetwork/java/javame/javamobile/download/overview/index.html
+.. _`Sun Java Wireless Toolkit 2.5.2_01 for CLDC`: http://www.oracle.com/technetwork/java/index-jsp-137162.html
