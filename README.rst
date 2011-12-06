@@ -57,7 +57,7 @@ Building
 ========
 
 Built using `Eclipse`_, the `MTJ plugin`_ and the `Java ME SDK 3.0`_ (or the
-`Sun Java Wireless Toolkit 2.5.2_01 for CLDC` on Linux).
+`Sun Java Wireless Toolkit 2.5.2_01 for CLDC`_ on Linux).
 
 I had to manually remove midp_1.0.jar and cldc_1.0.jar from the phone
 configuration MTJ picked up from the Java ME SDK in order to successfully
